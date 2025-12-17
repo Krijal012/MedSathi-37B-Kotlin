@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,9 +40,31 @@ fun LoginScreen() {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
+    var dialogMessage by remember { mutableStateOf("") }
 
     val context = LocalContext.current
     val activity = context as Activity
+    val auth = FirebaseAuth.getInstance()
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(if (dialogMessage.contains("Successful")) "Success" else "Error") },
+            text = { Text(dialogMessage) },
+            confirmButton = {
+                Button(onClick = {
+                    showDialog = false
+                    if (dialogMessage.contains("Successful")) {
+                        context.startActivity(Intent(context, MainActivity::class.java))
+                        activity.finish()
+                    }
+                }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 
     Scaffold { padding ->
         Column(
@@ -51,93 +74,72 @@ fun LoginScreen() {
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             Spacer(modifier = Modifier.height(60.dp))
 
-            // Logo
             Image(
                 painter = painterResource(R.drawable.logo),
-                contentDescription = "MedSathi Logo",
+                contentDescription = "Logo",
                 modifier = Modifier.size(100.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Title
             Text(
                 text = "Login Here",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black,
                 textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Email Field
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                placeholder = { Text("Email Address", color = Color.Gray) },
+                placeholder = { Text("Email Address") },
                 leadingIcon = {
                     Icon(
                         painter = painterResource(R.drawable.baseline_email_24),
-                        contentDescription = "Email Icon",
-                        tint = Color.Black
+                        contentDescription = null
                     )
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedIndicatorColor = Color.Gray,
-                    unfocusedIndicatorColor = Color.LightGray
-                )
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Password Field
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                placeholder = { Text("Password", color = Color.Gray) },
+                placeholder = { Text("Password") },
                 leadingIcon = {
                     Icon(
                         painter = painterResource(R.drawable.baseline_lock_24),
-                        contentDescription = "Lock Icon",
-                        tint = Color.Black
+                        contentDescription = null
                     )
                 },
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             painter = painterResource(
-                                if (passwordVisible) R.drawable.baseline_visibility_24
-                                else R.drawable.baseline_visibility_off_24
+                                if (passwordVisible)
+                                    R.drawable.baseline_visibility_24
+                                else
+                                    R.drawable.baseline_visibility_off_24
                             ),
-                            contentDescription = "Toggle Password Visibility",
-                            tint = Color.Gray
+                            contentDescription = null
                         )
                     }
                 },
-                visualTransformation = if (passwordVisible)
-                    VisualTransformation.None
-                else
-                    PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedIndicatorColor = Color.Gray,
-                    unfocusedIndicatorColor = Color.LightGray
-                )
+                visualTransformation =
+                if (passwordVisible) VisualTransformation.None
+                else PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Forgot Password
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
@@ -145,58 +147,54 @@ fun LoginScreen() {
                 Text(
                     text = "Forgot Password?",
                     color = Color(0xFF6A4FE9),
-                    fontSize = 14.sp,
                     modifier = Modifier.clickable {
-                        val intent = Intent(context, ForgotPasswordActivity::class.java)
-                        context.startActivity(intent)
+                        context.startActivity(
+                            Intent(context, ForgotPasswordActivity::class.java)
+                        )
                     }
                 )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Login Button
             Button(
                 onClick = {
-                    // Handle login logic
+                    if (email.isNotEmpty() && password.isNotEmpty()) {
+                        auth.signInWithEmailAndPassword(email, password)
+                            .addOnCompleteListener(activity) { task ->
+                                if (task.isSuccessful) {
+                                    dialogMessage = "Login Successful"
+                                    showDialog = true
+                                } else {
+                                    dialogMessage = "Login Failed: ${task.exception?.message}"
+                                    showDialog = true
+                                }
+                            }
+                    } else {
+                        dialogMessage = "Please enter email and password"
+                        showDialog = true
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2196F3)
-                )
+                shape = RoundedCornerShape(8.dp)
             ) {
-                Text(
-                    text = "Login Here",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White
-                )
+                Text("Login")
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Register Link
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "Don't have an account?",
-                    color = Color.Black,
-                    fontSize = 14.sp
-                )
+            Row {
+                Text("Don't have an account?")
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "Register Here",
                     color = Color(0xFF6A4FE9),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
                     modifier = Modifier.clickable {
-                        val intent = Intent(context, RegisterActivity::class.java)
-                        context.startActivity(intent)
+                        context.startActivity(
+                            Intent(context, RegisterActivity::class.java)
+                        )
                         activity.finish()
                     }
                 )

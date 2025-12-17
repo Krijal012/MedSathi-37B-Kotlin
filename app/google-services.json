@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "757150997688",
+    "firebase_url": "https://medsathi-37b-default-rtdb.firebaseio.com",
+    "project_id": "medsathi-37b",
+    "storage_bucket": "medsathi-37b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:757150997688:android:d7c5c2b7c180c92316284d",
+        "android_client_info": {
+          "package_name": "com.example.kotlinproject"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCbzO1hCRqxZZUTWBHw0Z0zmltKvQDfygY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:757150997688:android:cd006467515a8ab816284d",
+        "android_client_info": {
+          "package_name": "com.example.project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCbzO1hCRqxZZUTWBHw0Z0zmltKvQDfygY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

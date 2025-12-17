@@ -15,14 +15,12 @@
             android:name=".ForgotPasswordActivity"
             android:exported="true"
             android:label="@string/title_activity_forgot_password"
-            android:theme="@style/Theme.KotlinProject">
-        </activity>
+            android:theme="@style/Theme.KotlinProject" />
         <activity
             android:name=".RegisterActivity"
             android:exported="true"
             android:label="@string/title_activity_register"
-            android:theme="@style/Theme.KotlinProject">
-        </activity>
+            android:theme="@style/Theme.KotlinProject" />
         <activity
             android:name=".LoginActivity"
             android:exported="true"
@@ -30,7 +28,6 @@
             android:theme="@style/Theme.KotlinProject">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

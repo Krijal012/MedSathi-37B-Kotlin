@@ -23,6 +23,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.kotlinproject.Repo.UserRepo
+import com.example.kotlinproject.Repo.UserRepoImpl
 
 class RegisterActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,9 +42,31 @@ fun RegisterScreen() {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
+    var dialogMessage by remember { mutableStateOf("") }
 
     val context = LocalContext.current
     val activity = context as Activity
+    val userRepo: UserRepo = UserRepoImpl()
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(if (dialogMessage.contains("Successful")) "Success" else "Error") },
+            text = { Text(dialogMessage) },
+            confirmButton = {
+                Button(onClick = {
+                    showDialog = false
+                    if (dialogMessage.contains("Successful")) {
+                        context.startActivity(Intent(context, LoginActivity::class.java))
+                        activity.finish()
+                    }
+                }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 
     Scaffold { padding ->
         Column(
@@ -54,7 +78,6 @@ fun RegisterScreen() {
         ) {
             Spacer(modifier = Modifier.height(60.dp))
 
-            // Logo
             Image(
                 painter = painterResource(R.drawable.logo),
                 contentDescription = "MedSathi Logo",
@@ -63,7 +86,6 @@ fun RegisterScreen() {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Title
             Text(
                 text = "Register Here",
                 fontSize = 28.sp,
@@ -74,7 +96,6 @@ fun RegisterScreen() {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Full Name Field
             OutlinedTextField(
                 value = fullName,
                 onValueChange = { fullName = it },
@@ -98,7 +119,6 @@ fun RegisterScreen() {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Email Field
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -122,7 +142,6 @@ fun RegisterScreen() {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Password Field
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -162,10 +181,17 @@ fun RegisterScreen() {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Register Button
             Button(
                 onClick = {
-                    // Handle registration logic
+                    if (fullName.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty()) {
+                        userRepo.register(fullName, email, password) { success, message, _ ->
+                            dialogMessage = message
+                            showDialog = true
+                        }
+                    } else {
+                        dialogMessage = "Please fill all fields"
+                        showDialog = true
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -185,19 +211,18 @@ fun RegisterScreen() {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Login Link
             Row(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Don\'t have an account?",
+                    text = "Already have an account?",
                     color = Color.Black,
                     fontSize = 14.sp
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Register Here",
+                    text = "Login Here",
                     color = Color(0xFF6A4FE9),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,

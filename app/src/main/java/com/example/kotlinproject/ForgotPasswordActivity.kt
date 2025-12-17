@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
 
 class ForgotPasswordActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,7 +33,24 @@ class ForgotPasswordActivity : ComponentActivity() {
 @Composable
 fun ForgotPasswordScreen() {
     var email by remember { mutableStateOf("") }
+    var showDialog by remember { mutableStateOf(false) }
+    var dialogMessage by remember { mutableStateOf("") }
+
     val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(if (dialogMessage.contains("Sent")) "Success" else "Error") },
+            text = { Text(dialogMessage) },
+            confirmButton = {
+                Button(onClick = { showDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 
     Scaffold { padding ->
         Column(
@@ -44,7 +62,6 @@ fun ForgotPasswordScreen() {
         ) {
             Spacer(modifier = Modifier.height(60.dp))
 
-            // Logo
             Image(
                 painter = painterResource(R.drawable.logo),
                 contentDescription = "MedSathi Logo",
@@ -53,7 +70,6 @@ fun ForgotPasswordScreen() {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Title
             Text(
                 text = "Forgot your Password",
                 fontSize = 24.sp,
@@ -64,7 +80,6 @@ fun ForgotPasswordScreen() {
 
             Spacer(modifier = Modifier.height(80.dp))
 
-            // Email Field
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -88,10 +103,23 @@ fun ForgotPasswordScreen() {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Send Reset Link Button
             Button(
                 onClick = {
-                    // Handle password reset logic
+                    if (email.isNotEmpty()) {
+                        auth.sendPasswordResetEmail(email)
+                            .addOnCompleteListener { task ->
+                                if (task.isSuccessful) {
+                                    dialogMessage = "Reset Link Sent"
+                                    showDialog = true
+                                } else {
+                                    dialogMessage = "Failed to Send Link: ${task.exception?.message}"
+                                    showDialog = true
+                                }
+                            }
+                    } else {
+                        dialogMessage = "Please enter your email address"
+                        showDialog = true
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
