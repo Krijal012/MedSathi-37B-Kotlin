@@ -19,4 +19,12 @@ interface UserRepo {
         email: String,
         callBack: (Boolean, String) -> Unit
     )
+
+    fun addUserToDatabase(
+        userId: String,
+        username: String,
+        email: String,
+        password: String,
+        callBack: (Boolean, String) -> Unit
+    )
 }

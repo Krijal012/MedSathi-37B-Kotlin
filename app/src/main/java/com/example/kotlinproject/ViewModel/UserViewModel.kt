@@ -28,4 +28,14 @@ class UserViewModel(private val repo: UserRepo) : ViewModel() {
     ) {
         repo.forgetPassword(email, callBack)
     }
+
+    fun addUserToDatabase(
+        userId: String,
+        username: String,
+        email: String,
+        callBack: (Boolean, String) -> Unit
+    ) {
+        repo.addUserToDatabase(userId, username, email, "", callBack)
+    }
+
 }

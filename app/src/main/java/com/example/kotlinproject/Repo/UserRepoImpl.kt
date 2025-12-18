@@ -33,16 +33,29 @@ class UserRepoImpl : UserRepo {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    val user = UserModel(username, email)
+
                     val userId = auth.currentUser?.uid ?: ""
+
+                    val user = UserModel(
+                        id = userId,
+                        username = username,
+                        email = email,
+                        password = password
+                    )
+
                     database.child(userId).setValue(user)
                         .addOnCompleteListener { dbTask ->
                             if (dbTask.isSuccessful) {
                                 callBack(true, "Registration successful", userId)
                             } else {
-                                callBack(false, dbTask.exception?.message ?: "Database error", "")
+                                callBack(
+                                    false,
+                                    dbTask.exception?.message ?: "Database error",
+                                    ""
+                                )
                             }
                         }
+
                 } else {
                     callBack(false, task.exception?.message ?: "Registration failed", "")
                 }
@@ -59,6 +72,34 @@ class UserRepoImpl : UserRepo {
                     callBack(true, "Reset email sent")
                 } else {
                     callBack(false, task.exception?.message ?: "Failed to send email")
+                }
+            }
+    }
+
+    override fun addUserToDatabase(
+        userId: String,
+        username: String,
+        email: String,
+        password: String,
+        callBack: (Boolean, String) -> Unit
+    ) {
+
+        val user = UserModel(
+            id = userId,
+            username = username,
+            email = email,
+            password = password
+        )
+
+        database.child(userId).setValue(user)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    callBack(true, "User added to database")
+                } else {
+                    callBack(
+                        false,
+                        task.exception?.message ?: "Failed to add user"
+                    )
                 }
             }
     }
