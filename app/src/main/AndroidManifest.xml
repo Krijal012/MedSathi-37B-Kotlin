@@ -11,43 +11,76 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.KotlinProject">
+
+        <!-- Patient Dashboard -->
+        <activity
+            android:name=".PatientDashboard"
+            android:exported="true"
+            android:label="Patient Dashboard"
+            android:theme="@style/Theme.KotlinProject">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Staff Dashboard -->
+        <activity
+            android:name=".StaffDashboard"
+            android:exported="true"
+            android:label="Staff Dashboard"
+            android:theme="@style/Theme.KotlinProject">
+        </activity>
+
+        <!-- Pharmacist Dashboard -->
+        <activity
+            android:name=".PharmacistDashboard"
+            android:exported="true"
+            android:label="Pharmacist Dashboard"
+            android:theme="@style/Theme.KotlinProject">
+        </activity>
+
+        <!-- Admin Dashboard -->
+        <activity
+            android:name=".AdminDashboard"
+            android:exported="true"
+            android:label="Admin Dashboard"
+            android:theme="@style/Theme.KotlinProject">
+        </activity>
+
+        <!-- Existing Activities -->
         <activity
             android:name=".SplashScreen"
             android:exported="true"
             android:label="@string/title_activity_splash_screen"
             android:theme="@style/Theme.KotlinProject">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
+
         <activity
             android:name=".ForgotPasswordActivity"
             android:exported="true"
             android:label="@string/title_activity_forgot_password"
             android:theme="@style/Theme.KotlinProject" />
+
         <activity
             android:name=".RegisterActivity"
             android:exported="true"
             android:label="@string/title_activity_register"
             android:theme="@style/Theme.KotlinProject" />
+
         <activity
             android:name=".LoginActivity"
             android:exported="true"
             android:label="@string/title_activity_login"
             android:theme="@style/Theme.KotlinProject">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.KotlinProject"></activity>
+            android:theme="@style/Theme.KotlinProject">
+        </activity>
     </application>
 
 </manifest>
