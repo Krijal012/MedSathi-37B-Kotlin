@@ -1,9 +1,11 @@
 package com.example.kotlinproject
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,11 +41,14 @@ fun PatientDashboardScreen() {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val lightGray = Color(0xFFF5F5F5)
+    val context = LocalContext.current
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            DrawerContent()
+            PatientDrawerContent {
+                scope.launch { drawerState.close() }
+            }
         }
     ) {
         Scaffold(
@@ -99,8 +105,9 @@ fun PatientDashboardScreen() {
 }
 
 @Composable
-fun DrawerContent() {
+fun PatientDrawerContent(onClose: () -> Unit) {
     val darkBlue = Color(0xFF1E3A5F)
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -111,7 +118,6 @@ fun DrawerContent() {
     ) {
         Spacer(modifier = Modifier.height(40.dp))
 
-        // Logo
         Text(
             text = "MedSathi",
             color = Color.White,
@@ -120,23 +126,37 @@ fun DrawerContent() {
             modifier = Modifier.padding(bottom = 32.dp)
         )
 
-        // Menu Items
-        DrawerMenuItem("Dashboard", Icons.Default.Home, true)
-        DrawerMenuItem("Book Appointment", Icons.Default.DateRange, false)
-        DrawerMenuItem("My Appointments", Icons.Default.List, false)
-        DrawerMenuItem("Medical History", Icons.Default.Folder, false)
-        DrawerMenuItem("Doctor Availability", Icons.Default.Person, false)
+        DrawerMenuItem("Dashboard", Icons.Default.Home, true) {
+            onClose()
+        }
+        DrawerMenuItem("Book Appointment", Icons.Default.DateRange, false) {
+            onClose()
+            context.startActivity(Intent(context, BookAppointmentActivity::class.java))
+        }
+        DrawerMenuItem("My Appointments", Icons.Default.List, false) {
+            onClose()
+            context.startActivity(Intent(context, MyAppointmentsActivity::class.java))
+        }
+        DrawerMenuItem("Medical History", Icons.Default.Folder, false) {
+            onClose()
+            context.startActivity(Intent(context, MedicalHistoryActivity::class.java))
+        }
+        DrawerMenuItem("Doctor Availability", Icons.Default.Person, false) {
+            onClose()
+            context.startActivity(Intent(context, DoctorAvailabilityActivity::class.java))
+        }
     }
 }
 
 @Composable
-fun DrawerMenuItem(title: String, icon: ImageVector, isSelected: Boolean) {
+fun DrawerMenuItem(title: String, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {
     val backgroundColor = if (isSelected) Color(0xFF2C5F8D) else Color.Transparent
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(backgroundColor, RoundedCornerShape(8.dp))
+            .clickable { onClick() }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -280,6 +300,8 @@ fun StatCard(title: String, value: String, icon: ImageVector, modifier: Modifier
 
 @Composable
 fun UpcomingAppointmentsCard() {
+    val context = LocalContext.current
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -297,7 +319,9 @@ fun UpcomingAppointmentsCard() {
                     fontWeight = FontWeight.Bold
                 )
                 Button(
-                    onClick = { },
+                    onClick = {
+                        context.startActivity(Intent(context, BookAppointmentActivity::class.java))
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF26D0CE)
                     ),
@@ -310,7 +334,6 @@ fun UpcomingAppointmentsCard() {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Appointment Items
             repeat(3) {
                 AppointmentItem()
                 if (it < 2) Spacer(modifier = Modifier.height(8.dp))

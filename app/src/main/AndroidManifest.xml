@@ -12,7 +12,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.KotlinProject">
 
-        <!-- Patient Dashboard -->
+        <!-- Patient Dashboard - Main Launcher -->
         <activity
             android:name=".PatientDashboard"
             android:exported="true"
@@ -24,37 +24,68 @@
             </intent-filter>
         </activity>
 
-        <!-- Staff Dashboard -->
+        <!-- Patient Portal Activities -->
+        <activity
+            android:name=".BookAppointmentActivity"
+            android:exported="true"
+            android:label="Book Appointment"
+            android:theme="@style/Theme.KotlinProject" />
+
+        <activity
+            android:name=".SelectDateTimeActivity"
+            android:exported="true"
+            android:label="Select Date and Time"
+            android:theme="@style/Theme.KotlinProject" />
+
+        <activity
+            android:name=".AppointmentDetailsActivity"
+            android:exported="true"
+            android:label="Appointment Details"
+            android:theme="@style/Theme.KotlinProject" />
+
+        <activity
+            android:name=".MyAppointmentsActivity"
+            android:exported="true"
+            android:label="My Appointments"
+            android:theme="@style/Theme.KotlinProject" />
+
+        <activity
+            android:name=".MedicalHistoryActivity"
+            android:exported="true"
+            android:label="Medical History"
+            android:theme="@style/Theme.KotlinProject" />
+
+        <activity
+            android:name=".DoctorAvailabilityActivity"
+            android:exported="true"
+            android:label="Doctor Availability"
+            android:theme="@style/Theme.KotlinProject" />
+
+        <!-- Dashboard Activities -->
         <activity
             android:name=".StaffDashboard"
             android:exported="true"
             android:label="Staff Dashboard"
-            android:theme="@style/Theme.KotlinProject">
-        </activity>
+            android:theme="@style/Theme.KotlinProject" />
 
-        <!-- Pharmacist Dashboard -->
         <activity
             android:name=".PharmacistDashboard"
             android:exported="true"
             android:label="Pharmacist Dashboard"
-            android:theme="@style/Theme.KotlinProject">
-        </activity>
+            android:theme="@style/Theme.KotlinProject" />
 
-        <!-- Admin Dashboard -->
         <activity
             android:name=".AdminDashboard"
             android:exported="true"
             android:label="Admin Dashboard"
-            android:theme="@style/Theme.KotlinProject">
-        </activity>
+            android:theme="@style/Theme.KotlinProject" />
 
         <!-- Existing Activities -->
         <activity
             android:name=".SplashScreen"
             android:exported="true"
             android:label="@string/title_activity_splash_screen"
-            android:theme="@style/Theme.KotlinProject">
-        </activity>
+            android:theme="@style/Theme.KotlinProject" />
 
         <activity
             android:name=".ForgotPasswordActivity"
@@ -72,15 +103,13 @@
             android:name=".LoginActivity"
             android:exported="true"
             android:label="@string/title_activity_login"
-            android:theme="@style/Theme.KotlinProject">
-        </activity>
+            android:theme="@style/Theme.KotlinProject" />
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.KotlinProject">
-        </activity>
+            android:theme="@style/Theme.KotlinProject" />
     </application>
 
 </manifest>
