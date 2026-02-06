@@ -61,13 +61,32 @@
             android:label="Doctor Availability"
             android:theme="@style/Theme.KotlinProject" />
 
-        <!-- Dashboard Activities -->
+        <!-- Staff Dashboard Activities -->
         <activity
             android:name=".StaffDashboard"
             android:exported="true"
             android:label="Staff Dashboard"
             android:theme="@style/Theme.KotlinProject" />
 
+        <activity
+            android:name=".DoctorScheduleActivity"
+            android:exported="true"
+            android:label="Doctor Schedule"
+            android:theme="@style/Theme.KotlinProject" />
+
+        <activity
+            android:name=".PatientRecordsActivity"
+            android:exported="true"
+            android:label="Patient Records"
+            android:theme="@style/Theme.KotlinProject" />
+
+        <activity
+            android:name=".PatientQueueActivity"
+            android:exported="true"
+            android:label="Patient Queue"
+            android:theme="@style/Theme.KotlinProject" />
+
+        <!-- Other Dashboards -->
         <activity
             android:name=".PharmacistDashboard"
             android:exported="true"
