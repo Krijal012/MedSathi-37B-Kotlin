@@ -350,20 +350,20 @@ fun PatientDrawerContent() {
         )
 
         PatientDrawerMenuItem("Dashboard", Icons.Default.Home, false) {
-            val intent = Intent(context, PatientDashboard::class.kt)
+            val intent = Intent(context, PatientDashboard::class.java)
             context.startActivity(intent)
         }
         PatientDrawerMenuItem("Book Appointment", Icons.Default.DateRange, true) {}
         PatientDrawerMenuItem("My Appointments", Icons.Default.List, false) {
-            val intent = Intent(context, MyAppointmentsActivity::class.kt)
+            val intent = Intent(context, MyAppointmentsActivity::class.java)
             context.startActivity(intent)
         }
         PatientDrawerMenuItem("Medical History", Icons.Default.Folder, false) {
-            val intent = Intent(context, MedicalHistoryActivity::class.kt)
+            val intent = Intent(context, MedicalHistoryActivity::class.java)
             context.startActivity(intent)
         }
         PatientDrawerMenuItem("Doctor Availability", Icons.Default.Person, false) {
-            val intent = Intent(context, DoctorAvailabilityActivity::class.kt)
+            val intent = Intent(context, DoctorAvailabilityActivity::class.java)
             context.startActivity(intent)
         }
     }
