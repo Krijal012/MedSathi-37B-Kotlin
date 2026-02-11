@@ -1,9 +1,11 @@
 package com.example.kotlinproject
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,7 +46,9 @@ fun AdminDashboardScreen() {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            AdminDrawerContent()
+            AdminDrawerContent(currentScreen = "Dashboard") {
+                scope.launch { drawerState.close() }
+            }
         }
     ) {
         Scaffold(
@@ -131,8 +136,9 @@ fun AdminDashboardScreen() {
 }
 
 @Composable
-fun AdminDrawerContent() {
+fun AdminDrawerContent(currentScreen: String = "Dashboard", onClose: () -> Unit = {}) {
     val darkBlue = Color(0xFF1E3A5F)
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -151,20 +157,51 @@ fun AdminDrawerContent() {
             modifier = Modifier.padding(bottom = 32.dp)
         )
 
-        AdminDrawerMenuItem("Dashboard", Icons.Default.Home, true)
-        AdminDrawerMenuItem("Manage Patients", Icons.Default.People, false)
-        AdminDrawerMenuItem("Manage Staffs", Icons.Default.Person, false)
+        AdminDrawerMenuItem(
+            title = "Dashboard",
+            icon = Icons.Default.Home,
+            isSelected = currentScreen == "Dashboard"
+        ) {
+            onClose()
+            if (currentScreen != "Dashboard") {
+                context.startActivity(Intent(context, AdminDashboard::class.java))
+            }
+        }
+
+        AdminDrawerMenuItem(
+            title = "Manage Patients",
+            icon = Icons.Default.People,
+            isSelected = currentScreen == "ManagePatients"
+        ) {
+            onClose()
+            context.startActivity(Intent(context, ManagePatientsActivity::class.java))
+        }
+
+        AdminDrawerMenuItem(
+            title = "Manage Staffs",
+            icon = Icons.Default.Person,
+            isSelected = currentScreen == "ManageStaffs"
+        ) {
+            onClose()
+            context.startActivity(Intent(context, ManageStaffsActivity::class.java))
+        }
     }
 }
 
 @Composable
-fun AdminDrawerMenuItem(title: String, icon: ImageVector, isSelected: Boolean) {
+fun AdminDrawerMenuItem(
+    title: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit = {}
+) {
     val backgroundColor = if (isSelected) Color(0xFF2C5F8D) else Color.Transparent
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(backgroundColor, RoundedCornerShape(8.dp))
+            .clickable { onClick() }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
