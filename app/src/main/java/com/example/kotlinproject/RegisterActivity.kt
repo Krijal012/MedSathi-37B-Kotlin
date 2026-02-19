@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,19 +26,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.kotlinproject.Repo.UserRepo
 import com.example.kotlinproject.Repo.UserRepoImpl
+import com.example.kotlinproject.modernTextField
+import com.example.kotlinproject.modernFieldColors
+
 
 class RegisterActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent {
-            RegisterScreen()
-        }
+        setContent { RegisterScreen() }
     }
 }
 
 @Composable
 fun RegisterScreen() {
+
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -52,7 +55,7 @@ fun RegisterScreen() {
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text(if (dialogMessage.contains("Successful")) "Success" else "Error") },
+            title = { Text("Message", fontWeight = FontWeight.Bold) },
             text = { Text(dialogMessage) },
             confirmButton = {
                 Button(onClick = {
@@ -61,14 +64,15 @@ fun RegisterScreen() {
                         context.startActivity(Intent(context, LoginActivity::class.java))
                         activity.finish()
                     }
-                }) {
-                    Text("OK")
-                }
+                }) { Text("OK") }
             }
         )
     }
 
-    Scaffold { padding ->
+    Scaffold(
+        containerColor = Color(0xFFF8F9FC)
+    ) { padding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -76,110 +80,62 @@ fun RegisterScreen() {
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             Spacer(modifier = Modifier.height(60.dp))
 
             Image(
                 painter = painterResource(R.drawable.logo),
-                contentDescription = "MedSathi Logo",
-                modifier = Modifier.size(100.dp)
+                contentDescription = "Logo",
+                modifier = Modifier.size(110.dp)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Register Here",
-                fontSize = 28.sp,
+                text = "Create Account",
+                fontSize = 30.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                textAlign = TextAlign.Center
+                color = Color(0xFF1C1C1E)
+            )
+
+            Text(
+                text = "Sign up to get started",
+                fontSize = 14.sp,
+                color = Color(0xFF6E6E73)
             )
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            OutlinedTextField(
-                value = fullName,
-                onValueChange = { fullName = it },
-                placeholder = { Text("Full Name", color = Color.Gray) },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_person_24),
-                        contentDescription = "Person Icon",
-                        tint = Color.Black
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedIndicatorColor = Color.Gray,
-                    unfocusedIndicatorColor = Color.LightGray
-                )
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                placeholder = { Text("Email Address", color = Color.Gray) },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_email_24),
-                        contentDescription = "Email Icon",
-                        tint = Color.Black
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedIndicatorColor = Color.Gray,
-                    unfocusedIndicatorColor = Color.LightGray
-                )
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
+            modernTextField(fullName, { fullName = it }, "Full Name", R.drawable.baseline_person_24)
+            Spacer(modifier = Modifier.height(16.dp))
+            modernTextField(email, { email = it }, "Email Address", R.drawable.baseline_email_24)
+            Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                placeholder = { Text("Password", color = Color.Gray) },
+                placeholder = { Text("Password") },
                 leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_lock_24),
-                        contentDescription = "Lock Icon",
-                        tint = Color.Black
-                    )
+                    Icon(painterResource(R.drawable.baseline_lock_24), null)
                 },
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
-                            painter = painterResource(
+                            painterResource(
                                 if (passwordVisible) R.drawable.baseline_visibility_24
                                 else R.drawable.baseline_visibility_off_24
                             ),
-                            contentDescription = "Toggle Password Visibility",
-                            tint = Color.Gray
+                            null
                         )
                     }
                 },
-                visualTransformation = if (passwordVisible)
-                    VisualTransformation.None
-                else
-                    PasswordVisualTransformation(),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedIndicatorColor = Color.Gray,
-                    unfocusedIndicatorColor = Color.LightGray
-                )
+                shape = RoundedCornerShape(12.dp),
+                colors = modernFieldColors()
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(36.dp))
 
             Button(
                 onClick = {
@@ -189,46 +145,27 @@ fun RegisterScreen() {
                             showDialog = true
                         }
                     } else {
-                        dialogMessage = "Please fill all fields"
+                        dialogMessage = "All fields are required"
                         showDialog = true
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2196F3)
-                )
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A6CF7))
             ) {
-                Text(
-                    text = "Register Here",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White
-                )
+                Text("Create Account", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(26.dp))
 
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Row {
+                Text("Already have an account? ", color = Color(0xFF6E6E73))
                 Text(
-                    text = "Already have an account?",
-                    color = Color.Black,
-                    fontSize = 14.sp
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Login Here",
+                    "Login",
                     color = Color(0xFF6A4FE9),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable {
-                        val intent = Intent(context, LoginActivity::class.java)
-                        context.startActivity(intent)
+                        context.startActivity(Intent(context, LoginActivity::class.java))
                         activity.finish()
                     }
                 )

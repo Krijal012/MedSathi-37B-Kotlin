@@ -15,126 +15,83 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
+import com.example.kotlinproject.modernTextField
+import com.example.kotlinproject.modernFieldColors
+
 
 class ForgotPasswordActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent {
-            ForgotPasswordScreen()
-        }
+        setContent { ForgotPasswordScreen() }
     }
 }
 
 @Composable
 fun ForgotPasswordScreen() {
+
     var email by remember { mutableStateOf("") }
     var showDialog by remember { mutableStateOf(false) }
     var dialogMessage by remember { mutableStateOf("") }
 
-    val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
 
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text(if (dialogMessage.contains("Sent")) "Success" else "Error") },
+            title = { Text("Message", fontWeight = FontWeight.Bold) },
             text = { Text(dialogMessage) },
             confirmButton = {
-                Button(onClick = { showDialog = false }) {
-                    Text("OK")
-                }
+                Button(onClick = { showDialog = false }) { Text("OK") }
             }
         )
     }
 
-    Scaffold { padding ->
+    Scaffold(containerColor = Color(0xFFF8F9FC)) { padding ->
+
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(60.dp))
-
-            Image(
-                painter = painterResource(R.drawable.logo),
-                contentDescription = "MedSathi Logo",
-                modifier = Modifier.size(100.dp)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Forgot your Password",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                textAlign = TextAlign.Center
-            )
 
             Spacer(modifier = Modifier.height(80.dp))
 
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                placeholder = { Text("Email Address", color = Color.Gray) },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_email_24),
-                        contentDescription = "Email Icon",
-                        tint = Color.Black
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedIndicatorColor = Color.Gray,
-                    unfocusedIndicatorColor = Color.LightGray
-                )
-            )
+            Image(painterResource(R.drawable.logo), null, modifier = Modifier.size(110.dp))
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text("Reset Password", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("Enter your email to receive reset link", fontSize = 14.sp, color = Color(0xFF6E6E73))
+
+            Spacer(modifier = Modifier.height(50.dp))
+
+            modernTextField(email, { email = it }, "Email Address", R.drawable.baseline_email_24)
+
+            Spacer(modifier = Modifier.height(36.dp))
 
             Button(
                 onClick = {
                     if (email.isNotEmpty()) {
-                        auth.sendPasswordResetEmail(email)
-                            .addOnCompleteListener { task ->
-                                if (task.isSuccessful) {
-                                    dialogMessage = "Reset Link Sent"
-                                    showDialog = true
-                                } else {
-                                    dialogMessage = "Failed to Send Link: ${task.exception?.message}"
-                                    showDialog = true
-                                }
-                            }
+                        auth.sendPasswordResetEmail(email).addOnCompleteListener { task ->
+                            dialogMessage = if (task.isSuccessful)
+                                "Reset link sent to your email"
+                            else
+                                "Error: ${task.exception?.message}"
+                            showDialog = true
+                        }
                     } else {
-                        dialogMessage = "Please enter your email address"
+                        dialogMessage = "Email is required"
                         showDialog = true
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2196F3)
-                )
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A6CF7))
             ) {
-                Text(
-                    text = "Send Reset Link",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White
-                )
+                Text("Send Reset Link", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }

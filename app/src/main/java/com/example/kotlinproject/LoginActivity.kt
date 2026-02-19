@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,23 +21,24 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
+import com.example.kotlinproject.modernTextField
+import com.example.kotlinproject.modernFieldColors
+
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent {
-            LoginScreen()
-        }
+        setContent { LoginScreen() }
     }
 }
 
 @Composable
 fun LoginScreen() {
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -50,7 +52,7 @@ fun LoginScreen() {
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text(if (dialogMessage.contains("Successful")) "Success" else "Error") },
+            title = { Text("Message", fontWeight = FontWeight.Bold) },
             text = { Text(dialogMessage) },
             confirmButton = {
                 Button(onClick = {
@@ -59,142 +61,101 @@ fun LoginScreen() {
                         context.startActivity(Intent(context, MainActivity::class.java))
                         activity.finish()
                     }
-                }) {
-                    Text("OK")
-                }
+                }) { Text("OK") }
             }
         )
     }
 
-    Scaffold { padding ->
+    Scaffold(containerColor = Color(0xFFF8F9FC)) { padding ->
+
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
             Spacer(modifier = Modifier.height(60.dp))
 
-            Image(
-                painter = painterResource(R.drawable.logo),
-                contentDescription = "Logo",
-                modifier = Modifier.size(100.dp)
-            )
+            Image(painterResource(R.drawable.logo), null, modifier = Modifier.size(110.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            Text(
-                text = "Login Here",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
+            Text("Welcome Back", fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            Text("Login to continue", fontSize = 14.sp, color = Color(0xFF6E6E73))
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                placeholder = { Text("Email Address") },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_email_24),
-                        contentDescription = null
-                    )
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
+            modernTextField(email, { email = it }, "Email Address", R.drawable.baseline_email_24)
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
                 placeholder = { Text("Password") },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_lock_24),
-                        contentDescription = null
-                    )
-                },
+                leadingIcon = { Icon(painterResource(R.drawable.baseline_lock_24), null) },
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
-                            painter = painterResource(
-                                if (passwordVisible)
-                                    R.drawable.baseline_visibility_24
-                                else
-                                    R.drawable.baseline_visibility_off_24
-                            ),
-                            contentDescription = null
+                            painterResource(
+                                if (passwordVisible) R.drawable.baseline_visibility_24
+                                else R.drawable.baseline_visibility_off_24
+                            ), null
                         )
                     }
                 },
-                visualTransformation =
-                if (passwordVisible) VisualTransformation.None
-                else PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth()
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = modernFieldColors()
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Text(
-                    text = "Forgot Password?",
+                    "Forgot Password?",
                     color = Color(0xFF6A4FE9),
                     modifier = Modifier.clickable {
-                        context.startActivity(
-                            Intent(context, ForgotPasswordActivity::class.java)
-                        )
+                        context.startActivity(Intent(context, ForgotPasswordActivity::class.java))
                     }
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(30.dp))
 
             Button(
                 onClick = {
                     if (email.isNotEmpty() && password.isNotEmpty()) {
                         auth.signInWithEmailAndPassword(email, password)
                             .addOnCompleteListener(activity) { task ->
-                                if (task.isSuccessful) {
-                                    dialogMessage = "Login Successful"
-                                    showDialog = true
-                                } else {
-                                    dialogMessage = "Login Failed: ${task.exception?.message}"
-                                    showDialog = true
-                                }
+                                dialogMessage = if (task.isSuccessful)
+                                    "Login Successful"
+                                else
+                                    "Login Failed: ${task.exception?.message}"
+                                showDialog = true
                             }
                     } else {
-                        dialogMessage = "Please enter email and password"
+                        dialogMessage = "Please fill all fields"
                         showDialog = true
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(8.dp)
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A6CF7))
             ) {
-                Text("Login")
+                Text("Login", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(26.dp))
 
             Row {
-                Text("Don't have an account?")
-                Spacer(modifier = Modifier.width(4.dp))
+                Text("Don't have an account? ", color = Color(0xFF6E6E73))
                 Text(
-                    text = "Register Here",
+                    "Register",
                     color = Color(0xFF6A4FE9),
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable {
-                        context.startActivity(
-                            Intent(context, RegisterActivity::class.java)
-                        )
+                        context.startActivity(Intent(context, RegisterActivity::class.java))
                         activity.finish()
                     }
                 )
