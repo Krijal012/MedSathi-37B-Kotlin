@@ -84,6 +84,8 @@
             android:name=".ManagePatientsActivity"
             android:exported="true" />
 
+        <activity android:name=".ManageStaffsActivity" android:exported="true" />
+
         <activity
             android:name=".PatientQueueActivity"
             android:exported="true"

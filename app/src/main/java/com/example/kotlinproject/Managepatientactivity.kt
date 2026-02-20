@@ -57,8 +57,18 @@ fun ManagePatientsScreen() {
     val darkBlue = Color(0xFF1E3A5F)
     val teal = Color(0xFF26D0CE)
 
-    var patients by remember { mutableStateOf<List<Patient>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
+    var patients by remember {
+        mutableStateOf<List<Patient>>(
+            listOf(
+                Patient("1", "John Smith", "john@email.com", "9800000001", "32", "Male", "Kathmandu", "A+", "9800000010"),
+                Patient("2", "Jane Doe", "jane@email.com", "9800000002", "28", "Female", "Lalitpur", "B+", "9800000011"),
+                Patient("3", "Ram Prasad", "ram@email.com", "9800000003", "45", "Male", "Bhaktapur", "O+", "9800000012"),
+                Patient("4", "Sita Kumari", "sita@email.com", "9800000004", "35", "Female", "Pokhara", "AB+", "9800000013"),
+                Patient("5", "Hari Bahadur", "hari@email.com", "9800000005", "52", "Male", "Chitwan", "A-", "9800000014")
+            )
+        )
+    }
+    var isLoading by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
@@ -67,13 +77,12 @@ fun ManagePatientsScreen() {
 
     val firestore = FirebaseFirestore.getInstance()
 
-    // Helper to reload data
     val refreshData = {
         scope.launch {
             isLoading = true
             try {
                 val snapshot = firestore.collection("patients").get().await()
-                patients = snapshot.documents.map { doc ->
+                val firestorePatients = snapshot.documents.map { doc ->
                     Patient(
                         id = doc.id,
                         fullName = doc.getString("fullName") ?: "",
@@ -86,7 +95,12 @@ fun ManagePatientsScreen() {
                         emergencyContact = doc.getString("emergencyContact") ?: ""
                     )
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+                if (firestorePatients.isNotEmpty()) {
+                    patients = firestorePatients
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
             isLoading = false
         }
     }
@@ -98,15 +112,18 @@ fun ManagePatientsScreen() {
                 it.email.contains(searchQuery, ignoreCase = true)
     }
 
-    // Dialogs
     if (showAddDialog) {
         PatientFormDialog(
             title = "Add Patient",
             onDismiss = { showAddDialog = false },
             onConfirm = { patientData ->
                 scope.launch {
-                    firestore.collection("patients").add(patientData).await()
-                    refreshData()
+                    try {
+                        firestore.collection("patients").add(patientData).await()
+                        refreshData()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                     showAddDialog = false
                 }
             }
@@ -120,8 +137,12 @@ fun ManagePatientsScreen() {
             onDismiss = { showEditDialog = false },
             onConfirm = { updatedData ->
                 scope.launch {
-                    firestore.collection("patients").document(selectedPatient!!.id).update(updatedData).await()
-                    refreshData()
+                    try {
+                        firestore.collection("patients").document(selectedPatient!!.id).update(updatedData).await()
+                        refreshData()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                     showEditDialog = false
                 }
             }
@@ -134,17 +155,26 @@ fun ManagePatientsScreen() {
             title = { Text("Delete Patient") },
             text = { Text("Are you sure you want to delete ${selectedPatient?.fullName}?") },
             confirmButton = {
-                Button(onClick = {
-                    scope.launch {
-                        firestore.collection("patients").document(selectedPatient!!.id).delete().await()
-                        refreshData()
-                        showDeleteDialog = false
-                    }
-                }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            try {
+                                firestore.collection("patients").document(selectedPatient!!.id).delete().await()
+                                refreshData()
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                            showDeleteDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
                     Text("Delete")
                 }
             },
-            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } }
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+            }
         )
     }
 
@@ -165,7 +195,24 @@ fun ManagePatientsScreen() {
                             Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = darkBlue, titleContentColor = Color.White)
+                    actions = {
+                        Text(
+                            text = "Welcome, Admin",
+                            fontSize = 12.sp,
+                            color = Color.White,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = "Profile",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp).padding(end = 8.dp)
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = darkBlue,
+                        titleContentColor = Color.White
+                    )
                 )
             },
             floatingActionButton = {
@@ -175,23 +222,45 @@ fun ManagePatientsScreen() {
             }
         ) { paddingValues ->
             Column(
-                modifier = Modifier.fillMaxSize().background(lightGray).padding(paddingValues).padding(16.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(lightGray)
+                    .padding(paddingValues)
+                    .padding(16.dp)
             ) {
                 Text("Manage Patients", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Text("Add, edit, or remove patients", fontSize = 14.sp, color = Color.Gray)
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search...") },
+                    placeholder = { Text("Search patients...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = Color.White
+                    )
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "${filteredPatients.size} patients found",
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = teal)
+                    }
                 } else {
                     Column(
                         modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -204,6 +273,7 @@ fun ManagePatientsScreen() {
                                 onDelete = { selectedPatient = it; showDeleteDialog = true }
                             )
                         }
+                        Spacer(modifier = Modifier.height(80.dp))
                     }
                 }
             }
@@ -216,16 +286,36 @@ fun PatientCard(patient: Patient, onEdit: (Patient) -> Unit, onDelete: (Patient)
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFFE5F7F7),
+                modifier = Modifier.size(48.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF26D0CE), modifier = Modifier.size(28.dp))
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(patient.fullName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(patient.fullName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text(patient.email, fontSize = 12.sp, color = Color.Gray)
                 Text("Phone: ${patient.phone}", fontSize = 12.sp, color = Color.Gray)
+                if (patient.age.isNotBlank()) {
+                    Text("Age: ${patient.age}  |  ${patient.gender}  |  ${patient.bloodGroup}", fontSize = 11.sp, color = Color(0xFF26D0CE))
+                }
             }
-            IconButton(onClick = { onEdit(patient) }) { Icon(Icons.Default.Edit, "Edit", tint = Color.Blue) }
-            IconButton(onClick = { onDelete(patient) }) { Icon(Icons.Default.Delete, "Delete", tint = Color.Red) }
+            Column {
+                IconButton(onClick = { onEdit(patient) }) {
+                    Icon(Icons.Default.Edit, "Edit", tint = Color(0xFF3B82F6))
+                }
+                IconButton(onClick = { onDelete(patient) }) {
+                    Icon(Icons.Default.Delete, "Delete", tint = Color(0xFFEF4444))
+                }
+            }
         }
     }
 }
@@ -252,21 +342,46 @@ fun PatientFormDialog(
     var name by remember { mutableStateOf(initialPatient?.fullName ?: "") }
     var email by remember { mutableStateOf(initialPatient?.email ?: "") }
     var phone by remember { mutableStateOf(initialPatient?.phone ?: "") }
+    var age by remember { mutableStateOf(initialPatient?.age ?: "") }
+    var gender by remember { mutableStateOf(initialPatient?.gender ?: "") }
+    var address by remember { mutableStateOf(initialPatient?.address ?: "") }
+    var bloodGroup by remember { mutableStateOf(initialPatient?.bloodGroup ?: "") }
+    var emergencyContact by remember { mutableStateOf(initialPatient?.emergencyContact ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = { Text(title, fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full Name") })
-                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
-                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone") })
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full Name") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = age, onValueChange = { age = it }, label = { Text("Age") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = gender, onValueChange = { gender = it }, label = { Text("Gender") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = bloodGroup, onValueChange = { bloodGroup = it }, label = { Text("Blood Group") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Address") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = emergencyContact, onValueChange = { emergencyContact = it }, label = { Text("Emergency Contact") }, modifier = Modifier.fillMaxWidth())
             }
         },
         confirmButton = {
-            Button(onClick = {
-                onConfirm(mapOf("fullName" to name, "email" to email, "phone" to phone))
-            }) { Text("Save") }
+            Button(
+                onClick = {
+                    onConfirm(mapOf(
+                        "fullName" to name,
+                        "email" to email,
+                        "phone" to phone,
+                        "age" to age,
+                        "gender" to gender,
+                        "bloodGroup" to bloodGroup,
+                        "address" to address,
+                        "emergencyContact" to emergencyContact
+                    ))
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF26D0CE))
+            ) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
