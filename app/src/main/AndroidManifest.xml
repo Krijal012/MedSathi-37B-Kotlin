@@ -90,6 +90,10 @@
             android:label="Patient Queue"
             android:theme="@style/Theme.KotlinProject" />
 
+        <activity android:name=".AddMedicineActivity" android:exported="true" />
+        <activity android:name=".SearchMedicineActivity" android:exported="true" />
+        <activity android:name=".BillingActivity" android:exported="true" />
+
         <!-- Other Dashboards -->
         <activity
             android:name=".PharmacistDashboard"
