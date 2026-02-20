@@ -81,6 +81,10 @@
             android:theme="@style/Theme.KotlinProject" />
 
         <activity
+            android:name=".ManagePatientsActivity"
+            android:exported="true" />
+
+        <activity
             android:name=".PatientQueueActivity"
             android:exported="true"
             android:label="Patient Queue"

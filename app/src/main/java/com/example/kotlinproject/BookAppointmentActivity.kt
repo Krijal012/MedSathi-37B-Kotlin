@@ -52,7 +52,9 @@ fun BookAppointmentScreen() {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            PatientDrawerContent()
+            PatientDrawerContent(currentScreen = "BookAppointment", onClose = {
+                scope.launch { drawerState.close() }
+            })
         }
     ) {
         Scaffold(
@@ -61,9 +63,7 @@ fun BookAppointmentScreen() {
                     title = { },
                     navigationIcon = {
                         IconButton(onClick = {
-                            scope.launch {
-                                drawerState.open()
-                            }
+                            scope.launch { drawerState.open() }
                         }) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu")
                         }
@@ -102,7 +102,6 @@ fun BookAppointmentScreen() {
                     .verticalScroll(rememberScrollState())
                     .padding(24.dp)
             ) {
-                // Title
                 Text(
                     text = "Book Appointment",
                     fontSize = 24.sp,
@@ -116,12 +115,10 @@ fun BookAppointmentScreen() {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Progress Stepper
                 AppointmentStepper(currentStep = 1)
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Select Doctor Section
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -142,7 +139,6 @@ fun BookAppointmentScreen() {
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Doctor List - 2 columns
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             for (row in 0..2) {
                                 Row(
@@ -167,11 +163,9 @@ fun BookAppointmentScreen() {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Continue Button
                 Button(
                     onClick = {
-                        val intent = Intent(context, SelectDateTimeActivity::class.java)
-                        context.startActivity(intent)
+                        context.startActivity(Intent(context, SelectDateTimeActivity::class.java))
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -188,147 +182,7 @@ fun BookAppointmentScreen() {
 }
 
 @Composable
-fun AppointmentStepper(currentStep: Int) {
-    val teal = Color(0xFF26D0CE)
-    val gray = Color(0xFFD1D5DB)
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Step 1
-        StepIndicator(
-            stepNumber = "1",
-            isActive = currentStep >= 1,
-            isCompleted = currentStep > 1,
-            modifier = Modifier.weight(1f)
-        )
-
-        // Line
-        Divider(
-            modifier = Modifier
-                .weight(1f)
-                .height(2.dp),
-            color = if (currentStep > 1) teal else gray
-        )
-
-        // Step 2
-        StepIndicator(
-            stepNumber = "2",
-            isActive = currentStep >= 2,
-            isCompleted = currentStep > 2,
-            modifier = Modifier.weight(1f)
-        )
-
-        // Line
-        Divider(
-            modifier = Modifier
-                .weight(1f)
-                .height(2.dp),
-            color = if (currentStep > 2) teal else gray
-        )
-
-        // Step 3
-        StepIndicator(
-            stepNumber = "3",
-            isActive = currentStep >= 3,
-            isCompleted = currentStep > 3,
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-fun StepIndicator(
-    stepNumber: String,
-    isActive: Boolean,
-    isCompleted: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val teal = Color(0xFF26D0CE)
-    val gray = Color(0xFFD1D5DB)
-
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(50.dp)
-                .clip(CircleShape)
-                .background(if (isActive || isCompleted) teal else gray),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isCompleted) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Completed",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-            } else {
-                Text(
-                    text = stepNumber,
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun DoctorCard(
-    doctorName: String,
-    specialty: String,
-    isSelected: Boolean,
-    onSelect: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val teal = Color(0xFF26D0CE)
-    val borderColor = if (isSelected) teal else Color(0xFFE5E7EB)
-
-    Card(
-        modifier = modifier
-            .height(80.dp)
-            .border(2.dp, borderColor, RoundedCornerShape(8.dp))
-            .clickable { onSelect() },
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.MedicalServices,
-                contentDescription = "Doctor",
-                tint = teal,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Column {
-                Text(
-                    text = doctorName,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = specialty,
-                    fontSize = 11.sp,
-                    color = Color.Gray
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun PatientDrawerContent() {
+fun PatientDrawerContent(currentScreen: String = "Dashboard", onClose: () -> Unit = {}) {
     val darkBlue = Color(0xFF1E3A5F)
     val context = LocalContext.current
 
@@ -349,22 +203,35 @@ fun PatientDrawerContent() {
             modifier = Modifier.padding(bottom = 32.dp)
         )
 
-        PatientDrawerMenuItem("Dashboard", Icons.Default.Home, false) {
-            val intent = Intent(context, PatientDashboard::class.java)
-            context.startActivity(intent)
+        PatientDrawerMenuItem("Dashboard", Icons.Default.Home, currentScreen == "Dashboard") {
+            onClose()
+            if (currentScreen != "Dashboard") {
+                context.startActivity(Intent(context, PatientDashboard::class.java))
+            }
         }
-        PatientDrawerMenuItem("Book Appointment", Icons.Default.DateRange, true) {}
-        PatientDrawerMenuItem("My Appointments", Icons.Default.List, false) {
-            val intent = Intent(context, MyAppointmentsActivity::class.java)
-            context.startActivity(intent)
+        PatientDrawerMenuItem("Book Appointment", Icons.Default.DateRange, currentScreen == "BookAppointment") {
+            onClose()
+            if (currentScreen != "BookAppointment") {
+                context.startActivity(Intent(context, BookAppointmentActivity::class.java))
+            }
         }
-        PatientDrawerMenuItem("Medical History", Icons.Default.Folder, false) {
-            val intent = Intent(context, MedicalHistoryActivity::class.java)
-            context.startActivity(intent)
+        PatientDrawerMenuItem("My Appointments", Icons.Default.List, currentScreen == "MyAppointments") {
+            onClose()
+            if (currentScreen != "MyAppointments") {
+                context.startActivity(Intent(context, MyAppointmentsActivity::class.java))
+            }
         }
-        PatientDrawerMenuItem("Doctor Availability", Icons.Default.Person, false) {
-            val intent = Intent(context, DoctorAvailabilityActivity::class.java)
-            context.startActivity(intent)
+        PatientDrawerMenuItem("Medical History", Icons.Default.Folder, currentScreen == "MedicalHistory") {
+            onClose()
+            if (currentScreen != "MedicalHistory") {
+                context.startActivity(Intent(context, MedicalHistoryActivity::class.java))
+            }
+        }
+        PatientDrawerMenuItem("Doctor Availability", Icons.Default.Person, currentScreen == "DoctorAvailability") {
+            onClose()
+            if (currentScreen != "DoctorAvailability") {
+                context.startActivity(Intent(context, DoctorAvailabilityActivity::class.java))
+            }
         }
     }
 }
@@ -400,4 +267,82 @@ fun PatientDrawerMenuItem(
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
+}
+
+@Composable
+fun AppointmentStepper(currentStep: Int) {
+    val teal = Color(0xFF26D0CE)
+    val gray = Color(0xFFD1D5DB)
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        StepIndicator("1", currentStep >= 1, currentStep > 1, Modifier.weight(1f))
+        Divider(modifier = Modifier.weight(1f).height(2.dp), color = if (currentStep > 1) teal else gray)
+        StepIndicator("2", currentStep >= 2, currentStep > 2, Modifier.weight(1f))
+        Divider(modifier = Modifier.weight(1f).height(2.dp), color = if (currentStep > 2) teal else gray)
+        StepIndicator("3", currentStep >= 3, currentStep > 3, Modifier.weight(1f))
+    }
+}
+
+@Composable
+fun StepIndicator(
+    stepNumber: String,
+    isActive: Boolean,
+    isCompleted: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val teal = Color(0xFF26D0CE)
+    val gray = Color(0xFFD1D5DB)
+
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(50.dp)
+                .clip(CircleShape)
+                .background(if (isActive || isCompleted) teal else gray),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isCompleted) {
+                Icon(Icons.Default.Check, contentDescription = "Completed", tint = Color.White, modifier = Modifier.size(28.dp))
+            } else {
+                Text(stepNumber, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+fun DoctorCard(
+    doctorName: String,
+    specialty: String,
+    isSelected: Boolean,
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val teal = Color(0xFF26D0CE)
+    val borderColor = if (isSelected) teal else Color(0xFFE5E7EB)
+
+    Card(
+        modifier = modifier
+            .height(80.dp)
+            .border(2.dp, borderColor, RoundedCornerShape(8.dp))
+            .clickable { onSelect() },
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.MedicalServices, contentDescription = "Doctor", tint = teal, modifier = Modifier.size(32.dp))
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(doctorName, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(specialty, fontSize = 11.sp, color = Color.Gray)
+            }
+        }
+    }
 }

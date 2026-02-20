@@ -43,7 +43,9 @@ fun DoctorAvailabilityScreen() {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            PatientDrawerContent()
+            PatientDrawerContent(currentScreen = "DoctorAvailability", onClose = {
+                scope.launch { drawerState.close() }
+            })
         }
     ) {
         Scaffold(

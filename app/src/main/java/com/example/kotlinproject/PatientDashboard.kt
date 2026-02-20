@@ -1,11 +1,9 @@
 package com.example.kotlinproject
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,14 +39,13 @@ fun PatientDashboardScreen() {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val lightGray = Color(0xFFF5F5F5)
-    val context = LocalContext.current
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            PatientDrawerContent {
+            PatientDrawerContent(currentScreen = "Dashboard", onClose = {
                 scope.launch { drawerState.close() }
-            }
+            })
         }
     ) {
         Scaffold(
@@ -57,9 +54,7 @@ fun PatientDashboardScreen() {
                     title = { Text("MedSathi") },
                     navigationIcon = {
                         IconButton(onClick = {
-                            scope.launch {
-                                drawerState.open()
-                            }
+                            scope.launch { drawerState.open() }
                         }) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu")
                         }
@@ -80,100 +75,17 @@ fun PatientDashboardScreen() {
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
-                // Welcome Header
                 WelcomeHeader(patientName = "John Doe")
-
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // Stats Cards
                 StatsGrid()
-
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // Upcoming Appointments
                 UpcomingAppointmentsCard()
-
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // Health Metrics
                 HealthMetricsCard()
-
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
-}
-
-@Composable
-fun PatientDrawerContent(onClose: () -> Unit) {
-    val darkBlue = Color(0xFF1E3A5F)
-    val context = LocalContext.current
-
-    Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .width(280.dp)
-            .background(darkBlue)
-            .padding(16.dp)
-    ) {
-        Spacer(modifier = Modifier.height(40.dp))
-
-        Text(
-            text = "MedSathi",
-            color = Color.White,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 32.dp)
-        )
-
-        DrawerMenuItem("Dashboard", Icons.Default.Home, true) {
-            onClose()
-        }
-        DrawerMenuItem("Book Appointment", Icons.Default.DateRange, false) {
-            onClose()
-            context.startActivity(Intent(context, BookAppointmentActivity::class.java))
-        }
-        DrawerMenuItem("My Appointments", Icons.Default.List, false) {
-            onClose()
-            context.startActivity(Intent(context, MyAppointmentsActivity::class.java))
-        }
-        DrawerMenuItem("Medical History", Icons.Default.Folder, false) {
-            onClose()
-            context.startActivity(Intent(context, MedicalHistoryActivity::class.java))
-        }
-        DrawerMenuItem("Doctor Availability", Icons.Default.Person, false) {
-            onClose()
-            context.startActivity(Intent(context, DoctorAvailabilityActivity::class.java))
-        }
-    }
-}
-
-@Composable
-fun DrawerMenuItem(title: String, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {
-    val backgroundColor = if (isSelected) Color(0xFF2C5F8D) else Color.Transparent
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(backgroundColor, RoundedCornerShape(8.dp))
-            .clickable { onClick() }
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = title,
-            tint = Color.White,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = title,
-            color = Color.White,
-            fontSize = 14.sp
-        )
-    }
-    Spacer(modifier = Modifier.height(8.dp))
 }
 
 @Composable
@@ -184,75 +96,29 @@ fun WelcomeHeader(patientName: String) {
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Welcome back,",
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
-                Text(
-                    text = patientName,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1E3A5F)
-                )
+                Text("Welcome back,", fontSize = 14.sp, color = Color.Gray)
+                Text(patientName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E3A5F))
             }
-
-            Icon(
-                imageVector = Icons.Default.AccountCircle,
-                contentDescription = "Profile",
-                modifier = Modifier.size(40.dp),
-                tint = Color(0xFF1E3A5F)
-            )
+            Icon(Icons.Default.AccountCircle, contentDescription = "Profile", modifier = Modifier.size(40.dp), tint = Color(0xFF1E3A5F))
         }
     }
 }
 
 @Composable
 fun StatsGrid() {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            StatCard(
-                "Upcoming\nAppointments",
-                "2",
-                Icons.Default.DateRange,
-                Modifier.weight(1f)
-            )
-            StatCard(
-                "Prescriptions\nActive",
-                "3",
-                Icons.Default.LocalPharmacy,
-                Modifier.weight(1f)
-            )
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatCard("Upcoming\nAppointments", "2", Icons.Default.DateRange, Modifier.weight(1f))
+            StatCard("Prescriptions\nActive", "3", Icons.Default.LocalPharmacy, Modifier.weight(1f))
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            StatCard(
-                "Medical\nRecords",
-                "12",
-                Icons.Default.Article,
-                Modifier.weight(1f)
-            )
-            StatCard(
-                "Health\nScore",
-                "82%",
-                Icons.Default.FavoriteBorder,
-                Modifier.weight(1f)
-            )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatCard("Medical\nRecords", "12", Icons.Default.Article, Modifier.weight(1f))
+            StatCard("Health\nScore", "82%", Icons.Default.FavoriteBorder, Modifier.weight(1f))
         }
     }
 }
@@ -265,35 +131,14 @@ fun StatCard(title: String, value: String, icon: ImageVector, modifier: Modifier
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
+            modifier = Modifier.fillMaxSize().padding(12.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Text(
-                    text = title,
-                    fontSize = 11.sp,
-                    color = Color.Gray,
-                    lineHeight = 14.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = Color(0xFF26D0CE),
-                    modifier = Modifier.size(18.dp)
-                )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                Text(title, fontSize = 11.sp, color = Color.Gray, lineHeight = 14.sp, modifier = Modifier.weight(1f))
+                Icon(icon, contentDescription = title, tint = Color(0xFF26D0CE), modifier = Modifier.size(18.dp))
             }
-            Text(
-                text = value,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -313,27 +158,17 @@ fun UpcomingAppointmentsCard() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Upcoming Appointments",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Text("Upcoming Appointments", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Button(
-                    onClick = {
-                        context.startActivity(Intent(context, BookAppointmentActivity::class.java))
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF26D0CE)
-                    ),
+                    onClick = { context.startActivity(android.content.Intent(context, BookAppointmentActivity::class.java)) },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF26D0CE)),
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                 ) {
                     Text("Book", color = Color.White, fontSize = 12.sp)
                 }
             }
-
             Spacer(modifier = Modifier.height(12.dp))
-
             repeat(3) {
                 AppointmentItem()
                 if (it < 2) Spacer(modifier = Modifier.height(8.dp))
@@ -350,48 +185,21 @@ fun AppointmentItem() {
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8))
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.LocalHospital,
-                    contentDescription = "Doctor",
-                    modifier = Modifier.size(32.dp),
-                    tint = Color(0xFF26D0CE)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Default.LocalHospital, contentDescription = "Doctor", modifier = Modifier.size(32.dp), tint = Color(0xFF26D0CE))
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
-                    Text(
-                        text = "Dr. Ram Shrestha",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
-                    )
-                    Text(
-                        text = "Cardiologist",
-                        fontSize = 11.sp,
-                        color = Color.Gray
-                    )
+                    Text("Dr. Ram Shrestha", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("Cardiologist", fontSize = 11.sp, color = Color.Gray)
                 }
             }
-
             Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "Jan 10, 2025",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = "10:00 AM",
-                    fontSize = 10.sp,
-                    color = Color.Gray
-                )
+                Text("Jan 10, 2025", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                Text("10:00 AM", fontSize = 10.sp, color = Color.Gray)
             }
         }
     }
@@ -405,14 +213,8 @@ fun HealthMetricsCard() {
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Health Metrics",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-
+            Text("Health Metrics", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(12.dp))
-
             HealthMetricItem("Blood Pressure", "120/80", "Normal")
             Spacer(modifier = Modifier.height(8.dp))
             HealthMetricItem("Heart Rate", "72 BPM", "Normal")
@@ -430,43 +232,19 @@ fun HealthMetricItem(title: String, value: String, status: String) {
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8))
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = title,
-                    modifier = Modifier.size(20.dp),
-                    tint = Color(0xFF26D0CE)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Default.Favorite, contentDescription = title, modifier = Modifier.size(20.dp), tint = Color(0xFF26D0CE))
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
-                    Text(
-                        text = title,
-                        fontSize = 11.sp,
-                        color = Color.Gray
-                    )
-                    Text(
-                        text = value,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text(title, fontSize = 11.sp, color = Color.Gray)
+                    Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             }
-
-            Text(
-                text = status,
-                fontSize = 11.sp,
-                color = Color(0xFF4CAF50),
-                fontWeight = FontWeight.Medium
-            )
+            Text(status, fontSize = 11.sp, color = Color(0xFF4CAF50), fontWeight = FontWeight.Medium)
         }
     }
 }

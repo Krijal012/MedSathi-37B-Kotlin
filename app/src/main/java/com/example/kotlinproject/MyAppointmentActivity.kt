@@ -45,7 +45,9 @@ fun MyAppointmentsScreen() {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            PatientDrawerContent()
+            PatientDrawerContent(currentScreen = "MyAppointments", onClose = {
+                scope.launch { drawerState.close() }
+            })
         }
     ) {
         Scaffold(

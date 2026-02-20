@@ -43,7 +43,9 @@ fun MedicalHistoryScreen() {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            PatientDrawerContent()
+            PatientDrawerContent(currentScreen = "MedicalHistory", onClose = {
+                scope.launch { drawerState.close() }
+            })
         }
     ) {
         Scaffold(
