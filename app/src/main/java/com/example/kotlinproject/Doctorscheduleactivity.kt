@@ -50,39 +50,37 @@ fun DoctorScheduleScreen() {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("MedSathi - Staff") },
+                    title = {
+                        Text(
+                            "MedSathi - Staff",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
                     navigationIcon = {
-                        IconButton(onClick = {
-                            scope.launch {
-                                drawerState.open()
-                            }
-                        }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                         }
                     },
                     actions = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        Text(
+                            text = "Welcome, Staff",
+                            fontSize = 12.sp,
+                            color = Color.White,
                             modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = "Welcome back, {staff name}",
-                                fontSize = 14.sp,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = Icons.Default.AccountCircle,
-                                contentDescription = "Profile",
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
+                        )
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = "Profile",
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .padding(end = 8.dp)
+                        )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = darkBlue,
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White
+                        titleContentColor = Color.White
                     )
                 )
             }
@@ -95,25 +93,13 @@ fun DoctorScheduleScreen() {
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
-                Text(
-                    text = "Doctor Schedules",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Manage doctor working hours",
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
+                Text(text = "Doctor Schedules", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Manage doctor working hours", fontSize = 14.sp, color = Color.Gray)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Doctor Schedule Cards
                 repeat(4) {
-                    DoctorScheduleCard(
-                        doctorName = "Dr. Ram Shrestha",
-                        specialty = "Cardiologist"
-                    )
+                    DoctorScheduleCard(doctorName = "Dr. Ram Shrestha", specialty = "Cardiologist")
                     Spacer(modifier = Modifier.height(12.dp))
                 }
             }
@@ -141,22 +127,13 @@ fun DoctorScheduleCard(doctorName: String, specialty: String) {
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(
-                        text = doctorName,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = specialty,
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
+                    Text(text = doctorName, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text(text = specialty, fontSize = 12.sp, color = Color.Gray)
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Schedule Grid
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -166,24 +143,13 @@ fun DoctorScheduleCard(doctorName: String, specialty: String) {
                         modifier = Modifier.weight(1f),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Surface(
-                            color = Color(0xFFE5E7EB),
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
+                        Surface(color = Color(0xFFE5E7EB), shape = RoundedCornerShape(6.dp)) {
                             Column(
                                 modifier = Modifier.padding(6.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text(
-                                    text = day.take(3),
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = "9AM-4PM",
-                                    fontSize = 8.sp,
-                                    color = Color.Gray
-                                )
+                                Text(text = day.take(3), fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                                Text(text = "9AM-4PM", fontSize = 8.sp, color = Color.Gray)
                             }
                         }
                     }

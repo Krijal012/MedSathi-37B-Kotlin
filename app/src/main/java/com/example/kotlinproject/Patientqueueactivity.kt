@@ -50,39 +50,37 @@ fun PatientQueueScreen() {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("MedSathi - Staff") },
+                    title = {
+                        Text(
+                            "MedSathi - Staff",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
                     navigationIcon = {
-                        IconButton(onClick = {
-                            scope.launch {
-                                drawerState.open()
-                            }
-                        }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                         }
                     },
                     actions = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        Text(
+                            text = "Welcome, Staff",
+                            fontSize = 12.sp,
+                            color = Color.White,
                             modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = "Welcome back, {staff name}",
-                                fontSize = 14.sp,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = Icons.Default.AccountCircle,
-                                contentDescription = "Profile",
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
+                        )
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = "Profile",
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .padding(end = 8.dp)
+                        )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = darkBlue,
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White
+                        titleContentColor = Color.White
                     )
                 )
             }
@@ -95,20 +93,11 @@ fun PatientQueueScreen() {
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
-                Text(
-                    text = "Patient Queue",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Manage patient waiting queue",
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
+                Text(text = "Patient Queue", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Manage patient waiting queue", fontSize = 14.sp, color = Color.Gray)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Queue Cards
                 repeat(6) {
                     PatientQueueCard(
                         queueNumber = "001",
@@ -139,13 +128,10 @@ fun PatientQueueCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Queue Number
             Surface(
                 color = Color(0xFFE5E7EB),
                 shape = RoundedCornerShape(8.dp),
@@ -163,31 +149,14 @@ fun PatientQueueCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Patient Info
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = patientName,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = doctorName,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-                Text(
-                    text = estimatedWait,
-                    fontSize = 11.sp,
-                    color = Color.Gray
-                )
+                Text(text = patientName, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(text = doctorName, fontSize = 12.sp, color = Color.Gray)
+                Text(text = estimatedWait, fontSize = 11.sp, color = Color.Gray)
             }
 
-            // Action Buttons
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Surface(
-                    color = Color(0xFF6B7280),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
+                Surface(color = Color(0xFF6B7280), shape = RoundedCornerShape(8.dp)) {
                     Text(
                         text = status,
                         fontSize = 11.sp,
@@ -195,11 +164,7 @@ fun PatientQueueCard(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
-
-                IconButton(
-                    onClick = {},
-                    modifier = Modifier.size(32.dp)
-                ) {
+                IconButton(onClick = {}, modifier = Modifier.size(32.dp)) {
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = "Complete",

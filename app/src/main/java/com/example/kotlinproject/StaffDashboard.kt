@@ -62,17 +62,13 @@ fun StaffDashboardScreen() {
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = {
-                            scope.launch {
-                                drawerState.open()
-                            }
-                        }) {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                         }
                     },
                     actions = {
                         Text(
-                            text = "Welcome back, {staff name}",
+                            text = "Welcome, Staff",
                             fontSize = 12.sp,
                             color = Color.White,
                             modifier = Modifier.padding(end = 8.dp)
@@ -103,7 +99,6 @@ fun StaffDashboardScreen() {
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Title
                 Text(
                     text = "Staff Dashboard",
                     fontSize = 28.sp,
@@ -118,12 +113,10 @@ fun StaffDashboardScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Stats Grid
                 StaffStatsGrid()
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Current Queue Section
                 Text(
                     text = "Current Queue",
                     fontSize = 20.sp,
@@ -133,7 +126,6 @@ fun StaffDashboardScreen() {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Queue Items
                 repeat(4) {
                     StaffQueueCard(
                         queueNumber = "001",
@@ -166,13 +158,7 @@ fun StaffDrawerContent(currentScreen: String, onClose: () -> Unit) {
         Spacer(modifier = Modifier.height(40.dp))
 
         Text(
-            text = "MedSathi -",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Staff",
+            text = "MedSathi - Staff",
             color = Color.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
@@ -181,18 +167,27 @@ fun StaffDrawerContent(currentScreen: String, onClose: () -> Unit) {
 
         StaffDrawerMenuItem("Dashboard", Icons.Default.Home, currentScreen == "Dashboard") {
             onClose()
+            if (currentScreen != "Dashboard") {
+                context.startActivity(Intent(context, StaffDashboard::class.java))
+            }
         }
         StaffDrawerMenuItem("Doctor Schedule", Icons.Default.CalendarMonth, currentScreen == "DoctorSchedule") {
             onClose()
-            context.startActivity(Intent(context, DoctorScheduleActivity::class.java))
+            if (currentScreen != "DoctorSchedule") {
+                context.startActivity(Intent(context, DoctorScheduleActivity::class.java))
+            }
         }
         StaffDrawerMenuItem("Patient Records", Icons.Default.FolderOpen, currentScreen == "PatientRecords") {
             onClose()
-            context.startActivity(Intent(context, PatientRecordsActivity::class.java))
+            if (currentScreen != "PatientRecords") {
+                context.startActivity(Intent(context, PatientRecordsActivity::class.java))
+            }
         }
         StaffDrawerMenuItem("Patient Queue", Icons.Default.People, currentScreen == "PatientQueue") {
             onClose()
-            context.startActivity(Intent(context, PatientQueueActivity::class.java))
+            if (currentScreen != "PatientQueue") {
+                context.startActivity(Intent(context, PatientQueueActivity::class.java))
+            }
         }
     }
 }
@@ -216,11 +211,7 @@ fun StaffDrawerMenuItem(title: String, icon: ImageVector, isSelected: Boolean, o
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = title,
-            color = Color.White,
-            fontSize = 14.sp
-        )
+        Text(text = title, color = Color.White, fontSize = 14.sp)
     }
     Spacer(modifier = Modifier.height(4.dp))
 }
@@ -231,48 +222,21 @@ fun StaffStatsGrid() {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        StaffStatCard(
-            "Patients Queue",
-            "20",
-            Icons.Default.People,
-            Modifier.weight(1f)
-        )
-        StaffStatCard(
-            "In Queue",
-            "8",
-            Icons.Default.AccessTime,
-            Modifier.weight(1f)
-        )
+        StaffStatCard("Patients Queue", "20", Icons.Default.People, Modifier.weight(1f))
+        StaffStatCard("In Queue", "8", Icons.Default.AccessTime, Modifier.weight(1f))
     }
-
     Spacer(modifier = Modifier.height(12.dp))
-
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        StaffStatCard(
-            "Completed",
-            "12",
-            Icons.Default.CheckCircle,
-            Modifier.weight(1f)
-        )
-        StaffStatCard(
-            "Doctors Available",
-            "15",
-            Icons.Default.MedicalServices,
-            Modifier.weight(1f)
-        )
+        StaffStatCard("Completed", "12", Icons.Default.CheckCircle, Modifier.weight(1f))
+        StaffStatCard("Doctors Available", "15", Icons.Default.MedicalServices, Modifier.weight(1f))
     }
 }
 
 @Composable
-fun StaffStatCard(
-    title: String,
-    value: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier
-) {
+fun StaffStatCard(title: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.height(110.dp),
         shape = RoundedCornerShape(16.dp),
@@ -280,9 +244,7 @@ fun StaffStatCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
@@ -294,7 +256,8 @@ fun StaffStatCard(
                     text = title,
                     fontSize = 13.sp,
                     color = Color.Gray,
-                    fontWeight = FontWeight.Normal
+                    fontWeight = FontWeight.Normal,
+                    modifier = Modifier.weight(1f)
                 )
                 Icon(
                     imageVector = icon,
@@ -308,12 +271,7 @@ fun StaffStatCard(
                     modifier = Modifier.size(28.dp)
                 )
             }
-            Text(
-                text = value,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
+            Text(text = value, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.Black)
         }
     }
 }
@@ -333,13 +291,10 @@ fun StaffQueueCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Queue Number
             Text(
                 text = queueNumber,
                 fontSize = 32.sp,
@@ -347,28 +302,12 @@ fun StaffQueueCard(
                 color = Color(0xFF6B7280),
                 modifier = Modifier.width(70.dp)
             )
-
-            // Patient Info
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = patientName,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-                Text(
-                    text = doctorName,
-                    fontSize = 14.sp,
-                    color = Color(0xFF26D0CE)
-                )
+                Text(text = patientName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(text = doctorName, fontSize = 14.sp, color = Color(0xFF26D0CE))
             }
-
-            // Status Badge
             Column(horizontalAlignment = Alignment.End) {
-                Surface(
-                    color = Color(0xFF6B7280),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
+                Surface(color = Color(0xFF6B7280), shape = RoundedCornerShape(20.dp)) {
                     Text(
                         text = status,
                         fontSize = 12.sp,
@@ -378,11 +317,7 @@ fun StaffQueueCard(
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = time,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
+                Text(text = time, fontSize = 12.sp, color = Color.Gray)
             }
         }
     }

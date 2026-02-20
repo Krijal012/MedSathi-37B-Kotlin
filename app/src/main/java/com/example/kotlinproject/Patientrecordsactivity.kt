@@ -58,17 +58,13 @@ fun PatientRecordsScreen() {
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = {
-                            scope.launch {
-                                drawerState.open()
-                            }
-                        }) {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                         }
                     },
                     actions = {
                         Text(
-                            text = "Welcome back, {staff name}",
+                            text = "Welcome, Staff",
                             fontSize = 12.sp,
                             color = Color.White,
                             modifier = Modifier.padding(end = 8.dp)
@@ -98,20 +94,11 @@ fun PatientRecordsScreen() {
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = "Patient Records",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "View and update patient medical records",
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
+                Text(text = "Patient Records", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Text(text = "View and update patient medical records", fontSize = 14.sp, color = Color.Gray)
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Search Bar
                 OutlinedTextField(
                     value = "",
                     onValueChange = {},
@@ -128,7 +115,6 @@ fun PatientRecordsScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Table Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -142,8 +128,8 @@ fun PatientRecordsScreen() {
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text("Patient", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f))
-                            Text("Last\nVisit", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                            Text("Diagnosi\ns", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            Text("Last Visit", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            Text("Diagnosis", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                             Text("Doctor", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.8f))
                             Box(modifier = Modifier.width(80.dp))
                         }
@@ -151,15 +137,14 @@ fun PatientRecordsScreen() {
                         Spacer(modifier = Modifier.height(12.dp))
                         HorizontalDivider(color = Color(0xFFE5E7EB))
 
-                        // Patient Records
                         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                             repeat(4) {
                                 Spacer(modifier = Modifier.height(16.dp))
                                 PatientRecordRow(
                                     patientName = "John Smith",
-                                    lastVisit = "Jan 10,\n2025",
-                                    diagnosis = "Flu\nSympto\nms",
-                                    doctor = "Ram\nShresth\na"
+                                    lastVisit = "Jan 10, 2025",
+                                    diagnosis = "Flu Symptoms",
+                                    doctor = "Dr. Ram Shrestha"
                                 )
                             }
                             Spacer(modifier = Modifier.height(8.dp))
@@ -183,15 +168,14 @@ fun PatientRecordRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(patientName, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1.2f))
-        Text(lastVisit, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.weight(1f), lineHeight = 16.sp)
-        Text(diagnosis, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.weight(1f), lineHeight = 16.sp)
-        Text(doctor, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.weight(0.8f), lineHeight = 16.sp)
-
+        Text(patientName, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1.2f))
+        Text(lastVisit, fontSize = 11.sp, color = Color.Gray, modifier = Modifier.weight(1f), lineHeight = 16.sp)
+        Text(diagnosis, fontSize = 11.sp, color = Color.Gray, modifier = Modifier.weight(1f), lineHeight = 16.sp)
+        Text(doctor, fontSize = 11.sp, color = Color.Gray, modifier = Modifier.weight(0.8f), lineHeight = 16.sp)
         Button(
             onClick = {},
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A5F)),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier.width(80.dp)
         ) {
