@@ -1,8 +1,12 @@
 package com.example.kotlinproject
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,20 +16,46 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.kotlinproject.Model.Appointment
+import com.example.kotlinproject.Repo.AppointmentRepo
+import com.example.kotlinproject.Repo.UserRepoImpl
+import com.example.kotlinproject.ViewModel.AuthViewModel
+import com.example.kotlinproject.ViewModel.AuthViewModelFactory
+import com.example.kotlinproject.ViewModel.PatientViewModel
+import com.example.kotlinproject.ViewModel.PatientViewModelFactory
 import kotlinx.coroutines.launch
 
 class MyAppointmentsActivity : ComponentActivity() {
+    private val authViewModel: AuthViewModel by viewModels {
+        AuthViewModelFactory(UserRepoImpl())
+    }
+    
+    private val patientViewModel: PatientViewModel by viewModels {
+        PatientViewModelFactory(AppointmentRepo())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        authViewModel.getCurrentUser()
+        
+        authViewModel.currentUser.observe(this) { user ->
+            if (user != null) {
+                patientViewModel.fetchAppointments(user.uid)
+            }
+        }
+        
         setContent {
             MaterialTheme {
-                MyAppointmentsScreen()
+                MyAppointmentsScreen(authViewModel, patientViewModel)
             }
         }
     }
@@ -33,59 +63,74 @@ class MyAppointmentsActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyAppointmentsScreen() {
+fun MyAppointmentsScreen(authViewModel: AuthViewModel, patientViewModel: PatientViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val darkBlue = Color(0xFF1E3A5F)
     val lightGray = Color(0xFFF5F5F5)
 
-    var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Scheduled (3)", "Completed (1)", "Cancelled (1)")
+    val currentUser = authViewModel.currentUser.observeAsState()
+    val appointments = patientViewModel.appointments.observeAsState(emptyList())
+    var selectedTab by remember { mutableIntStateOf(0) }
+    
+    val bookingState = patientViewModel.bookingState.observeAsState()
+
+    LaunchedEffect(bookingState.value) {
+        if (bookingState.value is PatientViewModel.BookingState.Success) {
+            val msg = (bookingState.value as PatientViewModel.BookingState.Success).message
+            if (msg == "Appointment Cancelled") {
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                patientViewModel.resetBookingState()
+            }
+        }
+    }
+
+    val scheduled = appointments.value.filter { it.status == "Upcoming" }
+    val completed = appointments.value.filter { it.status == "Completed" }
+    val cancelled = appointments.value.filter { it.status == "Cancelled" }
+    
+    val tabs = listOf("Scheduled (${scheduled.size})", "Completed (${completed.size})", "Cancelled (${cancelled.size})")
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            PatientDrawerContent(currentScreen = "MyAppointments", onClose = {
-                scope.launch { drawerState.close() }
-            })
+            PatientDrawerContent(
+                currentScreen = "MyAppointments",
+                patientName = currentUser.value?.fullName ?: "Patient",
+                onClose = { scope.launch { drawerState.close() } },
+                onLogout = {
+                    authViewModel.logout()
+                    context.startActivity(Intent(context, LoginActivity::class.java))
+                    (context as? ComponentActivity)?.finish()
+                }
+            )
         }
     ) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { },
+                    title = { Text("My Appointments", color = Color.White, fontSize = 18.sp) },
                     navigationIcon = {
-                        IconButton(onClick = {
-                            scope.launch {
-                                drawerState.open()
-                            }
-                        }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                         }
                     },
                     actions = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        Text(
+                            text = currentUser.value?.fullName ?: "Patient",
+                            fontSize = 12.sp,
+                            color = Color.White,
                             modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = "Welcome back, {patient's name}",
-                                fontSize = 14.sp,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = Icons.Default.AccountCircle,
-                                contentDescription = "Profile",
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
+                        )
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = "Profile",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp).padding(end = 8.dp)
+                        )
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = darkBlue,
-                        navigationIconContentColor = Color.White
-                    )
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = darkBlue)
                 )
             }
         ) { paddingValues ->
@@ -98,46 +143,12 @@ fun MyAppointmentsScreen() {
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Title and Search
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "My Appointments",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "View and manage your appointments",
-                            fontSize = 14.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
+                Text(text = "Manage Appointments", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(text = "View and manage your appointments", fontSize = 14.sp, color = Color.Gray)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Search Bar
-                OutlinedTextField(
-                    value = "",
-                    onValueChange = {},
-                    placeholder = { Text("Search by doctor or speciality...", fontSize = 14.sp) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(8.dp)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Tabs
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     tabs.forEachIndexed { index, title ->
                         AppointmentTab(
                             title = title,
@@ -150,23 +161,38 @@ fun MyAppointmentsScreen() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Appointment List
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    repeat(4) {
-                        AppointmentCard(
-                            doctorName = "Dr. Ram Shrestha",
-                            specialty = "Cardiologist",
-                            date = "Jan 10, 2025",
-                            time = "15:00PM",
-                            status = "Scheduled"
-                        )
+                val currentList = when (selectedTab) {
+                    0 -> scheduled
+                    1 -> completed
+                    else -> cancelled
+                }
+
+                if (currentList.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No appointments found", color = Color.Gray)
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        currentList.forEach { appointment ->
+                            AppointmentCard(
+                                appointmentId = appointment.id,
+                                doctorName = appointment.doctorName,
+                                specialty = appointment.doctorSpecialty,
+                                date = appointment.date,
+                                time = appointment.time,
+                                status = appointment.status,
+                                onCancel = {
+                                    currentUser.value?.uid?.let { uid ->
+                                        patientViewModel.cancelAppointment(appointment.id, uid)
+                                    }
+                                }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
             }
         }
@@ -207,11 +233,13 @@ fun AppointmentTab(
 
 @Composable
 fun AppointmentCard(
+    appointmentId: String,
     doctorName: String,
     specialty: String,
     date: String,
     time: String,
-    status: String
+    status: String,
+    onCancel: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -278,8 +306,14 @@ fun AppointmentCard(
             }
 
             Column(horizontalAlignment = Alignment.End) {
+                val statusColor = when(status) {
+                    "Upcoming" -> Color(0xFF1E3A5F)
+                    "Completed" -> Color(0xFF4CAF50)
+                    else -> Color(0xFFEF4444)
+                }
+                
                 Surface(
-                    color = Color(0xFF1E3A5F),
+                    color = statusColor,
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
@@ -289,9 +323,12 @@ fun AppointmentCard(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = {}) {
-                    Text("Cancel", color = Color(0xFFEF4444), fontSize = 12.sp)
+                
+                if (status == "Upcoming") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(onClick = onCancel) {
+                        Text("Cancel", color = Color(0xFFEF4444), fontSize = 12.sp)
+                    }
                 }
             }
         }

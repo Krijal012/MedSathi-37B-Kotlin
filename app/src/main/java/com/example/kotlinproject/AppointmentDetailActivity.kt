@@ -1,8 +1,12 @@
 package com.example.kotlinproject
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,21 +16,32 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.kotlinproject.Repo.UserRepoImpl
+import com.example.kotlinproject.ViewModel.AuthViewModel
+import com.example.kotlinproject.ViewModel.AuthViewModelFactory
+import com.example.kotlinproject.ViewModel.PatientViewModel
+import com.example.kotlinproject.BookAppointmentActivity.Companion.patientViewModel
 import kotlinx.coroutines.launch
 
 class AppointmentDetailsActivity : ComponentActivity() {
+    private val authViewModel: AuthViewModel by viewModels {
+        AuthViewModelFactory(UserRepoImpl())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        authViewModel.getCurrentUser()
         setContent {
             MaterialTheme {
-                AppointmentDetailsScreen()
+                AppointmentDetailsScreen(authViewModel)
             }
         }
     }
@@ -34,7 +49,7 @@ class AppointmentDetailsActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppointmentDetailsScreen() {
+fun AppointmentDetailsScreen(authViewModel: AuthViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -42,50 +57,66 @@ fun AppointmentDetailsScreen() {
     val lightGray = Color(0xFFF5F5F5)
     val teal = Color(0xFF26D0CE)
 
+    val currentUser = authViewModel.currentUser.observeAsState()
+    val bookingState = patientViewModel?.bookingState?.observeAsState()
     var reasonForVisit by remember { mutableStateOf("") }
+
+    LaunchedEffect(bookingState?.value) {
+        when (val state = bookingState?.value) {
+            is PatientViewModel.BookingState.Success -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                patientViewModel?.resetBookingState()
+                val intent = Intent(context, PatientDashboard::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                context.startActivity(intent)
+                (context as? ComponentActivity)?.finish()
+            }
+            is PatientViewModel.BookingState.Error -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            PatientDrawerContent()
+            PatientDrawerContent(
+                currentScreen = "BookAppointment",
+                patientName = currentUser.value?.fullName ?: "Patient",
+                onClose = { scope.launch { drawerState.close() } },
+                onLogout = {
+                    authViewModel.logout()
+                    context.startActivity(Intent(context, LoginActivity::class.java))
+                    (context as? ComponentActivity)?.finish()
+                }
+            )
         }
     ) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { },
+                    title = { Text("Appointment Details", color = Color.White, fontSize = 18.sp) },
                     navigationIcon = {
-                        IconButton(onClick = {
-                            scope.launch {
-                                drawerState.open()
-                            }
-                        }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                         }
                     },
                     actions = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        Text(
+                            text = currentUser.value?.fullName ?: "Patient",
+                            fontSize = 12.sp,
+                            color = Color.White,
                             modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = "Welcome back, {patient's name}",
-                                fontSize = 14.sp,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = Icons.Default.AccountCircle,
-                                contentDescription = "Profile",
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
+                        )
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = "Profile",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp).padding(end = 8.dp)
+                        )
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = darkBlue,
-                        navigationIconContentColor = Color.White
-                    )
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = darkBlue)
                 )
             }
         ) { paddingValues ->
@@ -97,92 +128,46 @@ fun AppointmentDetailsScreen() {
                     .verticalScroll(rememberScrollState())
                     .padding(24.dp)
             ) {
-                // Title
-                Text(
-                    text = "Book Appointment",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Schedule a visit with our healthcare professionals",
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
+                Text(text = "Step 3: Confirm Booking", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Progress Stepper
                 AppointmentStepper(currentStep = 3)
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Appointment Details Section
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
-                        Text(
-                            text = "Appointment Details",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Provide additional information for your visit",
-                            fontSize = 13.sp,
-                            color = Color.Gray
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        // Reason for visit
-                        Text(
-                            text = "Reason for visit",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-
+                        Text(text = "Reason for visit", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = reasonForVisit,
                             onValueChange = { reasonForVisit = it },
-                            placeholder = {
-                                Text(
-                                    "Describe your symptoms or reason for the appointment",
-                                    fontSize = 13.sp
-                                )
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(120.dp),
+                            placeholder = { Text("Describe your symptoms...") },
+                            modifier = Modifier.fillMaxWidth().height(120.dp),
                             maxLines = 5
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Appointment Summary
-                        Text(
-                            text = "Appointment Summary",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-
+                        Text(text = "Appointment Summary", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(12.dp))
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFFF9FAFB)
-                            ),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                SummaryRow("Doctor:", "Dr. Ram Shrestha")
+                                SummaryRow("Doctor:", patientViewModel?.selectedDoctorName ?: "N/A")
                                 Spacer(modifier = Modifier.height(8.dp))
-                                SummaryRow("Date:", "January 10th, 2025")
+                                SummaryRow("Specialty:", patientViewModel?.selectedDoctorSpecialty ?: "N/A")
                                 Spacer(modifier = Modifier.height(8.dp))
-                                SummaryRow("Time:", "15:00PM")
+                                SummaryRow("Date:", patientViewModel?.selectedDate ?: "N/A")
+                                Spacer(modifier = Modifier.height(8.dp))
+                                SummaryRow("Time:", patientViewModel?.selectedTime ?: "N/A")
                             }
                         }
                     }
@@ -190,61 +175,32 @@ fun AppointmentDetailsScreen() {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Buttons Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Back Button
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(
-                        onClick = {
-                            (context as? ComponentActivity)?.finish()
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = darkBlue
-                        )
+                        onClick = { (context as? ComponentActivity)?.finish() },
+                        modifier = Modifier.weight(1f).height(50.dp)
                     ) {
-                        Text("Back", fontSize = 16.sp)
+                        Text("Back")
                     }
-
-                    // Continue Button (Book Appointment)
                     Button(
                         onClick = {
-                            // Handle appointment booking
+                            val user = currentUser.value
+                            if (user != null) {
+                                patientViewModel?.bookAppointment(user.uid, user.fullName, reasonForVisit)
+                            }
                         },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp),
+                        modifier = Modifier.weight(1f).height(50.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = teal),
-                        shape = RoundedCornerShape(8.dp)
+                        enabled = bookingState?.value !is PatientViewModel.BookingState.Loading
                     ) {
-                        Text("Continue", fontSize = 16.sp)
+                        if (bookingState?.value is PatientViewModel.BookingState.Loading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        } else {
+                            Text("Confirm Booking")
+                        }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun SummaryRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            fontSize = 14.sp,
-            color = Color.Gray
-        )
-        Text(
-            text = value,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
-        )
     }
 }

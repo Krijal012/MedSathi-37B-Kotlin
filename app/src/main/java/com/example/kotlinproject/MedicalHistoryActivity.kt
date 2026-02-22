@@ -1,8 +1,11 @@
 package com.example.kotlinproject
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,20 +16,31 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.kotlinproject.Repo.UserRepoImpl
+import com.example.kotlinproject.ViewModel.AuthViewModel
+import com.example.kotlinproject.ViewModel.AuthViewModelFactory
 import kotlinx.coroutines.launch
 
 class MedicalHistoryActivity : ComponentActivity() {
+    private val authViewModel: AuthViewModel by viewModels {
+        AuthViewModelFactory(UserRepoImpl())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        authViewModel.getCurrentUser()
         setContent {
             MaterialTheme {
-                MedicalHistoryScreen()
+                MedicalHistoryScreen(authViewModel)
             }
         }
     }
@@ -34,31 +48,37 @@ class MedicalHistoryActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MedicalHistoryScreen() {
+fun MedicalHistoryScreen(authViewModel: AuthViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val darkBlue = Color(0xFF1E3A5F)
     val lightGray = Color(0xFFF5F5F5)
+    
+    val currentUser = authViewModel.currentUser.observeAsState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            PatientDrawerContent(currentScreen = "MedicalHistory", onClose = {
-                scope.launch { drawerState.close() }
-            })
+            PatientDrawerContent(
+                currentScreen = "MedicalHistory",
+                patientName = currentUser.value?.fullName ?: "Patient",
+                onClose = { scope.launch { drawerState.close() } },
+                onLogout = {
+                    authViewModel.logout()
+                    context.startActivity(Intent(context, LoginActivity::class.java))
+                    (context as? ComponentActivity)?.finish()
+                }
+            )
         }
     ) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { },
+                    title = { Text("Medical History", color = Color.White, fontSize = 18.sp) },
                     navigationIcon = {
-                        IconButton(onClick = {
-                            scope.launch {
-                                drawerState.open()
-                            }
-                        }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                         }
                     },
                     actions = {
@@ -67,8 +87,8 @@ fun MedicalHistoryScreen() {
                             modifier = Modifier.padding(end = 8.dp)
                         ) {
                             Text(
-                                text = "Welcome back, {patient's name}",
-                                fontSize = 14.sp,
+                                text = currentUser.value?.fullName ?: "Patient",
+                                fontSize = 12.sp,
                                 color = Color.White
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -81,8 +101,7 @@ fun MedicalHistoryScreen() {
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = darkBlue,
-                        navigationIconContentColor = Color.White
+                        containerColor = darkBlue
                     )
                 )
             }
@@ -215,7 +234,8 @@ fun MedicalStatCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
                 Text(
                     text = title,
