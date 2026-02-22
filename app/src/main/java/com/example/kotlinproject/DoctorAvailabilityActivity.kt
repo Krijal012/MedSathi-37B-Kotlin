@@ -23,23 +23,31 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.kotlinproject.Repo.AppointmentRepo
 import com.example.kotlinproject.Repo.UserRepoImpl
 import com.example.kotlinproject.ViewModel.AuthViewModel
 import com.example.kotlinproject.ViewModel.AuthViewModelFactory
+import com.example.kotlinproject.ViewModel.PatientViewModel
+import com.example.kotlinproject.ViewModel.PatientViewModelFactory
 import kotlinx.coroutines.launch
 
 class DoctorAvailabilityActivity : ComponentActivity() {
     private val authViewModel: AuthViewModel by viewModels {
         AuthViewModelFactory(UserRepoImpl())
     }
+    
+    private val patientViewModel: PatientViewModel by viewModels {
+        PatientViewModelFactory(AppointmentRepo())
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         authViewModel.getCurrentUser()
+        patientViewModel.fetchProfessionals()
         setContent {
             MaterialTheme {
-                DoctorAvailabilityScreen(authViewModel)
+                DoctorAvailabilityScreen(authViewModel, patientViewModel)
             }
         }
     }
@@ -47,7 +55,7 @@ class DoctorAvailabilityActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DoctorAvailabilityScreen(authViewModel: AuthViewModel) {
+fun DoctorAvailabilityScreen(authViewModel: AuthViewModel, patientViewModel: PatientViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -56,6 +64,13 @@ fun DoctorAvailabilityScreen(authViewModel: AuthViewModel) {
     val teal = Color(0xFF26D0CE)
 
     val currentUser = authViewModel.currentUser.observeAsState()
+    val professionals = patientViewModel.professionals.observeAsState(emptyList())
+    
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredProfessionals = professionals.value.filter {
+        it.fullName.contains(searchQuery, ignoreCase = true) || it.role.contains(searchQuery, ignoreCase = true)
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -75,34 +90,13 @@ fun DoctorAvailabilityScreen(authViewModel: AuthViewModel) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Doctor Availability", color = Color.White, fontSize = 18.sp) },
+                    title = { Text("Availability", color = Color.White, fontSize = 18.sp) },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                         }
                     },
-                    actions = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = currentUser.value?.fullName ?: "Patient",
-                                fontSize = 12.sp,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = Icons.Default.AccountCircle,
-                                contentDescription = "Profile",
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = darkBlue
-                    )
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = darkBlue)
                 )
             }
         ) { paddingValues ->
@@ -114,64 +108,37 @@ fun DoctorAvailabilityScreen(authViewModel: AuthViewModel) {
                     .verticalScroll(rememberScrollState())
                     .padding(24.dp)
             ) {
-                // Title
-                Text(
-                    text = "Doctor Availability",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Find available doctors and view their schedules",
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
+                Text(text = "Healthcare Professionals", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(text = "View availability of Doctors and Pharmacists", fontSize = 14.sp, color = Color.Gray)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Search and Filter Row
-                Row(
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search by name or role...") },
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedTextField(
-                        value = "",
-                        onValueChange = {},
-                        placeholder = { Text("Search doctors...", fontSize = 14.sp) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        shape = RoundedCornerShape(8.dp)
-                    )
+                    shape = RoundedCornerShape(8.dp),
+                    singleLine = true
+                )
 
-                    OutlinedButton(
-                        onClick = {},
-                        modifier = Modifier.width(80.dp),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.FilterList,
-                                contentDescription = "Filter",
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("All", fontSize = 12.sp)
-                        }
+                Spacer(modifier = Modifier.height(20.dp))
+
+                if (filteredProfessionals.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No professionals found", color = Color.Gray)
                     }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Doctor List
-                repeat(4) {
-                    DoctorAvailabilityCard(
-                        doctorName = "Dr. Ram Shrestha",
-                        specialty = "Cardiologist",
-                        rating = "4.9 (200)",
-                        experience = "10 years",
-                        nextAvailable = "Today, 3:00 PM"
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                } else {
+                    filteredProfessionals.forEach { prof ->
+                        ProfessionalCard(
+                            name = prof.fullName,
+                            role = prof.role.replaceFirstChar { it.uppercase() },
+                            specialty = prof.specialty,
+                            schedule = prof.schedule
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                 }
             }
         }
@@ -179,12 +146,11 @@ fun DoctorAvailabilityScreen(authViewModel: AuthViewModel) {
 }
 
 @Composable
-fun DoctorAvailabilityCard(
-    doctorName: String,
+fun ProfessionalCard(
+    name: String,
+    role: String,
     specialty: String,
-    rating: String,
-    experience: String,
-    nextAvailable: String
+    schedule: Map<String, String>
 ) {
     val teal = Color(0xFF26D0CE)
 
@@ -194,78 +160,36 @@ fun DoctorAvailabilityCard(
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.MedicalServices,
-                    contentDescription = "Doctor",
+                    imageVector = if (role.lowercase() == "pharmacist") Icons.Default.Medication else Icons.Default.MedicalServices,
+                    contentDescription = null,
                     modifier = Modifier.size(48.dp),
                     tint = teal
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(
-                        text = doctorName,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = specialty,
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Star,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = Color(0xFFFBBF24)
-                        )
-                        Text(
-                            text = " $rating",
-                            fontSize = 11.sp,
-                            color = Color.Gray
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = experience,
-                            fontSize = 11.sp,
-                            color = Color.Gray
-                        )
-                    }
+                    Text(text = name, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "$role | $specialty", fontSize = 13.sp, color = Color.Gray)
                 }
             }
 
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "Next available",
-                    fontSize = 10.sp,
-                    color = Color.Gray
-                )
-                Text(
-                    text = nextAvailable,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = {},
-                    colors = ButtonDefaults.buttonColors(containerColor = teal),
-                    shape = RoundedCornerShape(6.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-                ) {
-                    Text("Book Now", fontSize = 12.sp)
+            if (schedule.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(text = "Working Hours:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+                schedule.forEach { (day, time) ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = day, fontSize = 11.sp, color = Color.Gray)
+                        Text(text = time, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    }
                 }
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "Schedule not set", fontSize = 11.sp, color = Color.LightGray)
             }
         }
     }

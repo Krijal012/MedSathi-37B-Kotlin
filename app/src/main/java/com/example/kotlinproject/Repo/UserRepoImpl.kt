@@ -9,6 +9,7 @@ class UserRepoImpl : UserRepo {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
     private val usersCollection = firestore.collection("users")
+    private val professionalsCollection = firestore.collection("professionals")
 
     override fun register(
         fullName: String,
@@ -17,7 +18,6 @@ class UserRepoImpl : UserRepo {
         role: String,
         callback: (Boolean, String, User?) -> Unit
     ) {
-        // Basic validation
         if (fullName.isEmpty() || email.isEmpty() || password.isEmpty()) {
             callback(false, "All fields are required", null)
             return
@@ -39,7 +39,6 @@ class UserRepoImpl : UserRepo {
             return
         }
 
-        // Create Firebase Auth account
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -54,16 +53,26 @@ class UserRepoImpl : UserRepo {
                         createdAt = System.currentTimeMillis()
                     )
 
-                    // Save to Firestore
+                    // Save to users collection
                     usersCollection.document(userId)
                         .set(user)
                         .addOnSuccessListener {
+                            // If pharmacist or doctor, also save to professionals collection
+                            if (user.role == "pharmacist" || user.role == "staff") {
+                                val professionalData = mapOf(
+                                    "uid" to userId,
+                                    "fullName" to fullName,
+                                    "role" to user.role,
+                                    "specialty" to if (user.role == "pharmacist") "Pharmacist" else "General Medicine",
+                                    "schedule" to emptyMap<String, String>()
+                                )
+                                professionalsCollection.document(userId).set(professionalData)
+                            }
                             callback(true, "Registration successful!", user)
                         }
                         .addOnFailureListener { e ->
-                            // CRITICAL: If Firestore fails, delete the Auth user so they can retry
                             firebaseUser?.delete()?.addOnCompleteListener {
-                                callback(false, "Database error: ${e.message}. Please ensure Firestore is enabled in Firebase Console.", null)
+                                callback(false, "Database error: ${e.message}", null)
                             }
                         }
                 } else {
@@ -94,7 +103,7 @@ class UserRepoImpl : UserRepo {
                                 val user = document.toObject(User::class.java)
                                 callback(true, "Login successful", user)
                             } else {
-                                callback(false, "User data not found in database", null)
+                                callback(false, "User data not found", null)
                             }
                         }
                         .addOnFailureListener { e ->

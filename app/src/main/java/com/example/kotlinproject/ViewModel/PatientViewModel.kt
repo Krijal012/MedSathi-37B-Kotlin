@@ -4,15 +4,26 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.kotlinproject.Model.Appointment
+import com.example.kotlinproject.Model.HealthcareProfessional
+import com.example.kotlinproject.Model.MedicalRecord
 import com.example.kotlinproject.Repo.AppointmentRepo
+import com.google.firebase.firestore.FirebaseFirestore
 
 class PatientViewModel(private val appointmentRepo: AppointmentRepo) : ViewModel() {
+
+    private val db = FirebaseFirestore.getInstance()
 
     private val _bookingState = MutableLiveData<BookingState>()
     val bookingState: LiveData<BookingState> = _bookingState
 
     private val _appointments = MutableLiveData<List<Appointment>>()
     val appointments: LiveData<List<Appointment>> = _appointments
+
+    private val _professionals = MutableLiveData<List<HealthcareProfessional>>()
+    val professionals: LiveData<List<HealthcareProfessional>> = _professionals
+
+    private val _medicalRecords = MutableLiveData<List<MedicalRecord>>()
+    val medicalRecords: LiveData<List<MedicalRecord>> = _medicalRecords
 
     // Temporary data for the booking flow
     var selectedDoctorName: String = ""
@@ -66,6 +77,31 @@ class PatientViewModel(private val appointmentRepo: AppointmentRepo) : ViewModel
                 _bookingState.value = BookingState.Error(message)
             }
         }
+    }
+
+    fun fetchProfessionals() {
+        db.collection("professionals")
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val list = snapshot.toObjects(HealthcareProfessional::class.java)
+                _professionals.value = list
+            }
+            .addOnFailureListener {
+                _professionals.value = emptyList()
+            }
+    }
+
+    fun fetchMedicalHistory(patientId: String) {
+        db.collection("medical_records")
+            .whereEqualTo("patientId", patientId)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val records = snapshot.toObjects(MedicalRecord::class.java)
+                _medicalRecords.value = records
+            }
+            .addOnFailureListener {
+                _medicalRecords.value = emptyList()
+            }
     }
     
     fun resetBookingState() {

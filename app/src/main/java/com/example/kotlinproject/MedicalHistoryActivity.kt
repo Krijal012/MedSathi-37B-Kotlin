@@ -24,23 +24,38 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.kotlinproject.Model.MedicalRecord
+import com.example.kotlinproject.Repo.AppointmentRepo
 import com.example.kotlinproject.Repo.UserRepoImpl
 import com.example.kotlinproject.ViewModel.AuthViewModel
 import com.example.kotlinproject.ViewModel.AuthViewModelFactory
+import com.example.kotlinproject.ViewModel.PatientViewModel
+import com.example.kotlinproject.ViewModel.PatientViewModelFactory
 import kotlinx.coroutines.launch
 
 class MedicalHistoryActivity : ComponentActivity() {
     private val authViewModel: AuthViewModel by viewModels {
         AuthViewModelFactory(UserRepoImpl())
     }
+    
+    private val patientViewModel: PatientViewModel by viewModels {
+        PatientViewModelFactory(AppointmentRepo())
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         authViewModel.getCurrentUser()
+        
+        authViewModel.currentUser.observe(this) { user ->
+            if (user != null) {
+                patientViewModel.fetchMedicalHistory(user.uid)
+            }
+        }
+        
         setContent {
             MaterialTheme {
-                MedicalHistoryScreen(authViewModel)
+                MedicalHistoryScreen(authViewModel, patientViewModel)
             }
         }
     }
@@ -48,7 +63,7 @@ class MedicalHistoryActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MedicalHistoryScreen(authViewModel: AuthViewModel) {
+fun MedicalHistoryScreen(authViewModel: AuthViewModel, patientViewModel: PatientViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -56,6 +71,14 @@ fun MedicalHistoryScreen(authViewModel: AuthViewModel) {
     val lightGray = Color(0xFFF5F5F5)
     
     val currentUser = authViewModel.currentUser.observeAsState()
+    val medicalRecords = patientViewModel.medicalRecords.observeAsState(emptyList())
+    
+    var searchQuery by remember { mutableStateOf("") }
+    
+    val filteredRecords = medicalRecords.value.filter {
+        it.diagnosis.contains(searchQuery, ignoreCase = true) || 
+        it.doctorName.contains(searchQuery, ignoreCase = true)
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -81,25 +104,6 @@ fun MedicalHistoryScreen(authViewModel: AuthViewModel) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                         }
                     },
-                    actions = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text(
-                                text = currentUser.value?.fullName ?: "Patient",
-                                fontSize = 12.sp,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = Icons.Default.AccountCircle,
-                                contentDescription = "Profile",
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = darkBlue
                     )
@@ -111,102 +115,51 @@ fun MedicalHistoryScreen(authViewModel: AuthViewModel) {
                     .fillMaxSize()
                     .background(lightGray)
                     .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-                    .padding(24.dp)
+                    .padding(horizontal = 24.dp)
             ) {
-                // Title and Search
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Medical History",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "View your complete medical records",
-                            fontSize = 14.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "My Medical History",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "View your previous visits and prescriptions",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Search Bar
                 OutlinedTextField(
-                    value = "",
-                    onValueChange = {},
-                    placeholder = { Text("Search records...", fontSize = 14.sp) },
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search by diagnosis or doctor...") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(8.dp)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                // Stats Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    MedicalStatCard(
-                        "Total Records",
-                        "4",
-                        Icons.Default.Folder,
-                        Modifier.weight(1f)
-                    )
-                    MedicalStatCard(
-                        "Doctors Visited",
-                        "3",
-                        Icons.Default.MedicalServices,
-                        Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    MedicalStatCard(
-                        "Active Prescriptions",
-                        "3",
-                        Icons.Default.Medication,
-                        Modifier.weight(1f)
-                    )
-                    MedicalStatCard(
-                        "Last Visit",
-                        "Dec 15",
-                        Icons.Default.CalendarToday,
-                        Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Medical Records Section
-                Text(
-                    text = "Medical Records",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Medical Records List
-                repeat(5) {
-                    MedicalRecordCard(
-                        title = "General Checkup",
-                        date = "Jan 10, 2025",
-                        doctorName = "Dr. Ram Shrestha"
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
+                if (filteredRecords.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No medical records found", color = Color.Gray)
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        filteredRecords.forEach { record ->
+                            MedicalHistoryCard(record)
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
                 }
             }
         }
@@ -214,57 +167,7 @@ fun MedicalHistoryScreen(authViewModel: AuthViewModel) {
 }
 
 @Composable
-fun MedicalStatCard(
-    title: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.height(90.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Text(
-                    text = title,
-                    fontSize = 11.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = Color(0xFF26D0CE),
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Text(
-                text = value,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
-@Composable
-fun MedicalRecordCard(
-    title: String,
-    date: String,
-    doctorName: String
-) {
+fun MedicalHistoryCard(record: MedicalRecord) {
     var expanded by remember { mutableStateOf(false) }
 
     Card(
@@ -286,7 +189,7 @@ fun MedicalRecordCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.MedicalServices,
+                        imageVector = Icons.Default.ReceiptLong,
                         contentDescription = "Record",
                         tint = Color(0xFF26D0CE),
                         modifier = Modifier.size(32.dp)
@@ -294,36 +197,42 @@ fun MedicalRecordCard(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = title,
-                            fontSize = 14.sp,
+                            text = record.diagnosis,
+                            fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.DateRange,
-                                contentDescription = null,
-                                modifier = Modifier.size(12.dp),
-                                tint = Color.Gray
-                            )
-                            Text(
-                                text = " $date",
-                                fontSize = 11.sp,
-                                color = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = doctorName,
-                                fontSize = 11.sp,
-                                color = Color(0xFF26D0CE)
-                            )
-                        }
+                        Text(
+                            text = record.date,
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
                     }
                 }
                 Icon(
                     imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    contentDescription = null,
                     tint = Color.Gray
                 )
+            }
+
+            if (expanded) {
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = Color(0xFFF3F4F6))
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Text(text = "Doctor: ${record.doctorName}", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(text = "Prescriptions:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+                record.prescription.forEach { med ->
+                    Text(text = "• $med", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(text = "Bill Amount:", fontSize = 13.sp, color = Color.Gray)
+                    Text(text = "Rs ${record.billAmount.toInt()}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF26D0CE))
+                }
             }
         }
     }

@@ -46,20 +46,11 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
 
-
     implementation("androidx.navigation:navigation-compose:2.7.7")
-
     implementation("androidx.compose.material3:material3:1.2.1")
     implementation("androidx.activity:activity-compose:1.8.2")
-
-    dependencies {
-        // Add these if they are missing
-        implementation("androidx.compose.runtime:runtime-livedata:1.7.6")
-        implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-
-        // For the Icons warnings
-        implementation("androidx.compose.material:material-icons-extended:1.7.6")
-    }
+    implementation("androidx.compose.runtime:runtime-livedata:1.7.6")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 
     // Compose BOM and UI dependencies
     implementation(platform(libs.androidx.compose.bom))
@@ -71,14 +62,17 @@ dependencies {
     // Material Icons Extended - REQUIRED for all icons
     implementation("androidx.compose.material:material-icons-extended:1.7.6")
 
-    // Firebase BOM (version manager)
-    implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
+    // Coil for image loading
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
-    // Firebase services
+    // Cloudinary
+    implementation("com.cloudinary:cloudinary-android:2.5.0")
+
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-database-ktx")
-
 
     // Testing dependencies
     testImplementation(libs.junit)

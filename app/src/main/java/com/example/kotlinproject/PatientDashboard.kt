@@ -24,26 +24,39 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.kotlinproject.Repo.AppointmentRepo
 import com.example.kotlinproject.Repo.UserRepoImpl
 import com.example.kotlinproject.ViewModel.AuthViewModel
 import com.example.kotlinproject.ViewModel.AuthViewModelFactory
+import com.example.kotlinproject.ViewModel.PatientViewModel
+import com.example.kotlinproject.ViewModel.PatientViewModelFactory
 import kotlinx.coroutines.launch
 
 class PatientDashboard : ComponentActivity() {
 
-    private val viewModel: AuthViewModel by viewModels {
+    private val authViewModel: AuthViewModel by viewModels {
         AuthViewModelFactory(UserRepoImpl())
+    }
+    
+    private val patientViewModel: PatientViewModel by viewModels {
+        PatientViewModelFactory(AppointmentRepo())
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        viewModel.getCurrentUser()
+        authViewModel.getCurrentUser()
+        
+        authViewModel.currentUser.observe(this) { user ->
+            if (user != null) {
+                patientViewModel.fetchAppointments(user.uid)
+            }
+        }
 
         setContent {
             MaterialTheme {
-                PatientDashboardScreen(viewModel)
+                PatientDashboardScreen(authViewModel, patientViewModel)
             }
         }
     }
@@ -51,12 +64,16 @@ class PatientDashboard : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PatientDashboardScreen(viewModel: AuthViewModel) {
+fun PatientDashboardScreen(authViewModel: AuthViewModel, patientViewModel: PatientViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val lightGray = Color(0xFFF5F5F5)
     val context = LocalContext.current
-    val currentUser = viewModel.currentUser.observeAsState()
+    
+    val currentUser = authViewModel.currentUser.observeAsState()
+    val appointments = patientViewModel.appointments.observeAsState(emptyList())
+    
+    val upcomingAppointments = appointments.value.filter { it.status == "Upcoming" }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -66,7 +83,7 @@ fun PatientDashboardScreen(viewModel: AuthViewModel) {
                 patientName = currentUser.value?.fullName ?: "Patient",
                 onClose = { scope.launch { drawerState.close() } },
                 onLogout = {
-                    viewModel.logout()
+                    authViewModel.logout()
                     context.startActivity(Intent(context, LoginActivity::class.java))
                     (context as? ComponentActivity)?.finish()
                 }
@@ -100,9 +117,9 @@ fun PatientDashboardScreen(viewModel: AuthViewModel) {
             ) {
                 WelcomeHeader(patientName = currentUser.value?.fullName ?: "Patient")
                 Spacer(modifier = Modifier.height(16.dp))
-                StatsGrid()
+                StatsGrid(upcomingCount = upcomingAppointments.size)
                 Spacer(modifier = Modifier.height(16.dp))
-                UpcomingAppointmentsCard()
+                UpcomingAppointmentsCard(upcomingAppointments)
                 Spacer(modifier = Modifier.height(16.dp))
                 HealthMetricsCard()
             }
@@ -144,7 +161,7 @@ fun WelcomeHeader(patientName: String) {
 }
 
 @Composable
-fun StatsGrid() {
+fun StatsGrid(upcomingCount: Int) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -153,7 +170,7 @@ fun StatsGrid() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            StatCard("Upcoming\nAppointments", "2", Icons.Default.DateRange, Modifier.weight(1f))
+            StatCard("Upcoming\nAppointments", upcomingCount.toString(), Icons.Default.DateRange, Modifier.weight(1f))
             StatCard("Prescriptions\nActive", "3", Icons.Default.LocalPharmacy, Modifier.weight(1f))
         }
         Row(
@@ -204,31 +221,30 @@ fun StatCard(title: String, value: String, icon: ImageVector, modifier: Modifier
 }
 
 @Composable
-fun UpcomingAppointmentsCard() {
+fun UpcomingAppointmentsCard(upcoming: List<com.example.kotlinproject.Model.Appointment>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Upcoming Appointments", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            }
+            Text("Upcoming Appointments", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(12.dp))
-            repeat(3) {
-                AppointmentItem()
-                if (it < 2) Spacer(modifier = Modifier.height(8.dp))
+            
+            if (upcoming.isEmpty()) {
+                Text("No upcoming appointments", color = Color.Gray, fontSize = 13.sp)
+            } else {
+                upcoming.take(3).forEach { appointment ->
+                    AppointmentItem(appointment)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
         }
     }
 }
 
 @Composable
-fun AppointmentItem() {
+fun AppointmentItem(appointment: com.example.kotlinproject.Model.Appointment) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
@@ -253,13 +269,13 @@ fun AppointmentItem() {
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
-                    Text("Dr. Ram Shrestha", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Text("Cardiologist", fontSize = 11.sp, color = Color.Gray)
+                    Text(appointment.doctorName, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(appointment.doctorSpecialty, fontSize = 11.sp, color = Color.Gray)
                 }
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("Jan 10, 2025", fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                Text("10:00 AM", fontSize = 10.sp, color = Color.Gray)
+                Text(appointment.date, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                Text(appointment.time, fontSize = 10.sp, color = Color.Gray)
             }
         }
     }

@@ -2,10 +2,12 @@ package com.example.kotlinproject
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,14 +25,35 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.kotlinproject.Model.Appointment
+import com.example.kotlinproject.Repo.AppointmentRepo
+import com.example.kotlinproject.Repo.MedicineRepo
+import com.example.kotlinproject.Repo.UserRepoImpl
+import com.example.kotlinproject.ViewModel.AuthViewModel
+import com.example.kotlinproject.ViewModel.AuthViewModelFactory
+import com.example.kotlinproject.ViewModel.PharmacistViewModel
+import com.example.kotlinproject.ViewModel.PharmacistViewModelFactory
 import kotlinx.coroutines.launch
 
 class PharmacistDashboard : ComponentActivity() {
+    private val authViewModel: AuthViewModel by viewModels {
+        AuthViewModelFactory(UserRepoImpl())
+    }
+    
+    private val pharmacistViewModel: PharmacistViewModel by viewModels {
+        PharmacistViewModelFactory(MedicineRepo(), AppointmentRepo())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        authViewModel.getCurrentUser()
+        pharmacistViewModel.fetchAllMedicines()
+        pharmacistViewModel.fetchAllAppointments()
+
         setContent {
             MaterialTheme {
-                PharmacistDashboardScreen()
+                PharmacistDashboardScreen(authViewModel, pharmacistViewModel)
             }
         }
     }
@@ -37,55 +61,53 @@ class PharmacistDashboard : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PharmacistDashboardScreen() {
+fun PharmacistDashboardScreen(authViewModel: AuthViewModel, pharmacistViewModel: PharmacistViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val lightGray = Color(0xFFF5F5F5)
     val darkBlue = Color(0xFF1E3A5F)
+    val context = LocalContext.current
+    
+    val currentUser = authViewModel.currentUser.observeAsState()
+    val medicines = pharmacistViewModel.medicines.observeAsState(emptyList())
+    val appointments = pharmacistViewModel.appointments.observeAsState(emptyList())
+    val operationState = pharmacistViewModel.operationState.observeAsState()
+
+    val upcomingAppointments = appointments.value.filter { it.status == "Upcoming" }
+    val lowStockMedicines = medicines.value.filter { it.stock <= it.minStock }
+
+    LaunchedEffect(operationState.value) {
+        if (operationState.value is PharmacistViewModel.OperationState.Success) {
+            Toast.makeText(context, (operationState.value as PharmacistViewModel.OperationState.Success).message, Toast.LENGTH_SHORT).show()
+            pharmacistViewModel.resetOperationState()
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            PharmacistDrawerContent(currentScreen = "Dashboard") {
-                scope.launch { drawerState.close() }
-            }
+            PharmacistDrawerContent(
+                currentScreen = "Dashboard",
+                pharmacistName = currentUser.value?.fullName ?: "Pharmacist",
+                onClose = { scope.launch { drawerState.close() } },
+                onLogout = {
+                    authViewModel.logout()
+                    context.startActivity(Intent(context, LoginActivity::class.java))
+                    (context as? ComponentActivity)?.finish()
+                }
+            )
         }
     ) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = {
-                        Text(
-                            "MedSathi - Pharmacy",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
+                    title = { Text("Pharmacy Dashboard", color = Color.White, fontSize = 18.sp) },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                         }
                     },
-                    actions = {
-                        Text(
-                            text = "Welcome, Pharmacist",
-                            fontSize = 12.sp,
-                            color = Color.White,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Profile",
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .padding(end = 8.dp)
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = darkBlue,
-                        titleContentColor = Color.White
-                    )
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = darkBlue)
                 )
             }
         ) { paddingValues ->
@@ -97,104 +119,52 @@ fun PharmacistDashboardScreen() {
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
-                PharmacistWelcomeCard(pharmacistName = "Pharmacist")
+                PharmacistWelcomeCard(pharmacistName = currentUser.value?.fullName ?: "Pharmacist")
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(text = "Pharmacy Dashboard", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(text = "Manage medicines, inventory, and billing", fontSize = 14.sp, color = Color.Gray)
+                PharmacistStatsGrid(totalMedicines = medicines.value.size, lowStockCount = lowStockMedicines.size)
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                PharmacistStatsGrid()
+                Text(text = "Patient Appointments", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(12.dp))
 
-                Spacer(modifier = Modifier.height(16.dp))
+                if (upcomingAppointments.isEmpty()) {
+                    Text("No upcoming appointments", color = Color.Gray, modifier = Modifier.padding(8.dp))
+                } else {
+                    upcomingAppointments.forEach { appt ->
+                        PatientBookingCard(
+                            appointment = appt,
+                            onComplete = { pharmacistViewModel.updateAppointmentStatus(appt.id, "Completed") },
+                            onReject = { pharmacistViewModel.updateAppointmentStatus(appt.id, "Cancelled") }
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+                }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                ) {
-                    Icon(Icons.Default.Warning, contentDescription = "Warning", tint = Color(0xFFEF4444), modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Warning, "Warning", tint = Color.Red, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Low Stock Items", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Low Stock Medicines", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                repeat(4) {
+                lowStockMedicines.forEach { medicine ->
                     MedicineStockCard(
-                        medicineName = "Amoxicillin 500mg",
-                        category = "Antibiotics",
-                        stockLeft = 15,
-                        minRequired = 50
+                        medicineName = medicine.name,
+                        category = medicine.category,
+                        stockLeft = medicine.stock,
+                        minRequired = medicine.minStock
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
-}
-
-@Composable
-fun PharmacistDrawerContent(currentScreen: String = "Dashboard", onClose: () -> Unit = {}) {
-    val darkBlue = Color(0xFF1E3A5F)
-    val context = LocalContext.current
-
-    Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .width(280.dp)
-            .background(darkBlue)
-            .padding(16.dp)
-    ) {
-        Spacer(modifier = Modifier.height(40.dp))
-
-        Text(
-            text = "MedSathi - Pharmacy",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 32.dp)
-        )
-
-        PharmacistDrawerMenuItem("Dashboard", Icons.Default.Home, currentScreen == "Dashboard") {
-            onClose()
-            if (currentScreen != "Dashboard") context.startActivity(Intent(context, PharmacistDashboard::class.java))
-        }
-        PharmacistDrawerMenuItem("Add Medicine", Icons.Default.Add, currentScreen == "AddMedicine") {
-            onClose()
-            if (currentScreen != "AddMedicine") context.startActivity(Intent(context, AddMedicineActivity::class.java))
-        }
-        PharmacistDrawerMenuItem("Search Medicine", Icons.Default.Search, currentScreen == "SearchMedicine") {
-            onClose()
-            if (currentScreen != "SearchMedicine") context.startActivity(Intent(context, SearchMedicineActivity::class.java))
-        }
-        PharmacistDrawerMenuItem("Billing", Icons.Default.Receipt, currentScreen == "Billing") {
-            onClose()
-            if (currentScreen != "Billing") context.startActivity(Intent(context, BillingActivity::class.java))
-        }
-    }
-}
-
-@Composable
-fun PharmacistDrawerMenuItem(title: String, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {
-    val backgroundColor = if (isSelected) Color(0xFF2C5F8D) else Color.Transparent
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(backgroundColor, RoundedCornerShape(8.dp))
-            .clickable { onClick() }
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(imageVector = icon, contentDescription = title, tint = Color.White, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(text = title, color = Color.White, fontSize = 14.sp)
-    }
-    Spacer(modifier = Modifier.height(8.dp))
 }
 
 @Composable
@@ -219,15 +189,15 @@ fun PharmacistWelcomeCard(pharmacistName: String) {
 }
 
 @Composable
-fun PharmacistStatsGrid() {
+fun PharmacistStatsGrid(totalMedicines: Int, lowStockCount: Int) {
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PharmacistStatCard("Total Medicines", "2025", Icons.Default.Medication, Modifier.weight(1f))
-            PharmacistStatCard("Low Stock Items", "23", Icons.Default.Warning, Modifier.weight(1f))
+            PharmacistStatCard("Total Medicines", totalMedicines.toString(), Icons.Default.Medication, Modifier.weight(1f))
+            PharmacistStatCard("Low Stock Items", lowStockCount.toString(), Icons.Default.Warning, Modifier.weight(1f))
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PharmacistStatCard("Today's Sales", "Rs 50000", Icons.Default.Receipt, Modifier.weight(1f))
-            PharmacistStatCard("Pending Orders", "15", Icons.Default.ShoppingCart, Modifier.weight(1f))
+            PharmacistStatCard("Today's Sales", "Rs 0", Icons.Default.Receipt, Modifier.weight(1f))
+            PharmacistStatCard("Pending Orders", "0", Icons.Default.ShoppingCart, Modifier.weight(1f))
         }
     }
 }
@@ -276,14 +246,64 @@ fun MedicineStockCard(medicineName: String, category: String, stockLeft: Int, mi
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            val progress = if (minRequired > 0) stockLeft.toFloat() / minRequired.toFloat() else 1f
             LinearProgressIndicator(
-                progress = { stockLeft.toFloat() / minRequired.toFloat() },
+                progress = { progress.coerceAtMost(1f) },
                 modifier = Modifier.fillMaxWidth().height(6.dp),
                 color = Color(0xFF3B82F6),
                 trackColor = Color(0xFFE5E7EB)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = "Minimum required: $minRequired", fontSize = 11.sp, color = Color.Gray)
+        }
+    }
+}
+
+@Composable
+fun PatientBookingCard(appointment: Appointment, onComplete: () -> Unit, onReject: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = Color(0xFFE5F7F7), shape = RoundedCornerShape(8.dp), modifier = Modifier.size(40.dp)) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Person, null, tint = Color(0xFF26D0CE))
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = appointment.patientName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(text = "${appointment.date} | ${appointment.time}", fontSize = 12.sp, color = Color.Gray)
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = "Reason: ${appointment.reason}", fontSize = 13.sp, color = Color.DarkGray)
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = onReject,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Reject", fontSize = 12.sp)
+                }
+                Button(
+                    onClick = onComplete,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Complete", fontSize = 12.sp)
+                }
+            }
         }
     }
 }

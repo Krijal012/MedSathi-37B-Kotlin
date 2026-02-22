@@ -49,6 +49,7 @@ class BookAppointmentActivity : ComponentActivity() {
         }
         
         authViewModel.getCurrentUser()
+        patientViewModel?.fetchProfessionals()
         
         setContent {
             MaterialTheme {
@@ -69,16 +70,8 @@ fun BookAppointmentScreen(authViewModel: AuthViewModel, patientViewModel: Patien
     val teal = Color(0xFF26D0CE)
 
     val currentUser = authViewModel.currentUser.observeAsState()
-    var selectedDoctorIndex by remember { mutableStateOf(-1) }
-    
-    val doctors = listOf(
-        Pair("Dr. Ram Shrestha", "Cardiologist"),
-        Pair("Dr. Sita Sharma", "Neurologist"),
-        Pair("Dr. Hari Thapa", "Orthopedic"),
-        Pair("Dr. Anita Rai", "Pediatrician"),
-        Pair("Dr. Sunil Karki", "Dermatologist"),
-        Pair("Dr. Maya Singh", "General Physician")
-    )
+    val professionals = patientViewModel.professionals.observeAsState(emptyList())
+    var selectedProfIndex by remember { mutableIntStateOf(-1) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -135,7 +128,7 @@ fun BookAppointmentScreen(authViewModel: AuthViewModel, patientViewModel: Patien
                     .verticalScroll(rememberScrollState())
                     .padding(24.dp)
             ) {
-                Text(text = "Step 1: Select Doctor", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Step 1: Select Professional", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 AppointmentStepper(currentStep = 1)
@@ -148,27 +141,32 @@ fun BookAppointmentScreen(authViewModel: AuthViewModel, patientViewModel: Patien
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        doctors.chunked(2).forEachIndexed { rowIndex, pair ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                pair.forEachIndexed { colIndex, doctor ->
-                                    val index = rowIndex * 2 + colIndex
-                                    DoctorCard(
-                                        doctorName = doctor.first,
-                                        specialty = doctor.second,
-                                        isSelected = selectedDoctorIndex == index,
-                                        onSelect = { 
-                                            selectedDoctorIndex = index
-                                            patientViewModel.selectedDoctorName = doctor.first
-                                            patientViewModel.selectedDoctorSpecialty = doctor.second
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
+                        if (professionals.value.isEmpty()) {
+                            Text("No professionals available for booking", color = Color.Gray, modifier = Modifier.padding(16.dp))
+                        } else {
+                            professionals.value.chunked(2).forEachIndexed { rowIndex, chunk ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    chunk.forEachIndexed { colIndex, prof ->
+                                        val index = rowIndex * 2 + colIndex
+                                        DoctorCard(
+                                            doctorName = prof.fullName,
+                                            specialty = "${prof.role.replaceFirstChar { it.uppercase() }} | ${prof.specialty}",
+                                            isSelected = selectedProfIndex == index,
+                                            onSelect = { 
+                                                selectedProfIndex = index
+                                                patientViewModel.selectedDoctorName = prof.fullName
+                                                patientViewModel.selectedDoctorSpecialty = prof.specialty
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                    if (chunk.size == 1) Spacer(modifier = Modifier.weight(1f))
                                 }
+                                Spacer(modifier = Modifier.height(12.dp))
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
                         }
                     }
                 }
@@ -181,7 +179,7 @@ fun BookAppointmentScreen(authViewModel: AuthViewModel, patientViewModel: Patien
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = teal),
-                    enabled = selectedDoctorIndex != -1
+                    enabled = selectedProfIndex != -1
                 ) {
                     Text("Continue", fontSize = 16.sp)
                 }

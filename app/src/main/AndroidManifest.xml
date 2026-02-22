@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
+        android:name=".BaseApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -82,6 +83,7 @@
         <activity android:name=".AddMedicineActivity" android:exported="true" />
         <activity android:name=".SearchMedicineActivity" android:exported="true" />
         <activity android:name=".BillingActivity" android:exported="true" />
+        <activity android:name=".PharmacistScheduleActivity" android:exported="true" />
 
         <activity
             android:name=".MainActivity"
