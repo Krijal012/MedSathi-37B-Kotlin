@@ -1,18 +1,18 @@
 package com.example.kotlinproject
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,53 +23,71 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.firebase.auth.FirebaseAuth
+import com.example.kotlinproject.Repo.UserRepoImpl
+import com.example.kotlinproject.ViewModel.AuthViewModel
+import com.example.kotlinproject.ViewModel.AuthViewModelFactory
 
 class LoginActivity : ComponentActivity() {
+
+    private val viewModel: AuthViewModel by viewModels {
+        AuthViewModelFactory(UserRepoImpl())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { LoginScreen() }
+        setContent {
+            LoginScreen(viewModel)
+        }
     }
 }
 
 @Composable
-fun LoginScreen() {
-
+fun LoginScreen(viewModel: AuthViewModel) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var showDialog by remember { mutableStateOf(false) }
-    var dialogMessage by remember { mutableStateOf("") }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val context = LocalContext.current
-    val activity = context as Activity
-    val auth = FirebaseAuth.getInstance()
+    val authState = viewModel.authState.observeAsState()
 
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Message", fontWeight = FontWeight.Bold) },
-            text = { Text(dialogMessage) },
-            confirmButton = {
-                Button(onClick = {
-                    showDialog = false
-                    if (dialogMessage.contains("Successful")) {
-                        context.startActivity(Intent(context, MainActivity::class.java))
-                        activity.finish()
-                    }
-                }) { Text("OK") }
+    // Handle auth state changes
+    LaunchedEffect(authState.value) {
+        when (val state = authState.value) {
+            is AuthViewModel.AuthState.Success -> {
+                val user = state.user
+
+                // Navigate based on role
+                val intent = when (user?.role) {
+                    "patient" -> Intent(context, PatientDashboard::class.java)
+                    "staff" -> Intent(context, StaffDashboard::class.java)
+                    "admin" -> Intent(context, AdminDashboard::class.java)
+                    "pharmacist" -> Intent(context, PharmacistDashboard::class.java)
+                    else -> Intent(context, PatientDashboard::class.java)
+                }
+
+                context.startActivity(intent)
+                (context as? ComponentActivity)?.finish()
             }
-        )
+            is AuthViewModel.AuthState.Error -> {
+                snackbarHostState.showSnackbar(state.message)
+            }
+            else -> {}
+        }
     }
 
-    Scaffold(containerColor = Color(0xFFF8F9FC)) { padding ->
-
+    Scaffold(
+        containerColor = Color(0xFFF8F9FC),
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 24.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Spacer(modifier = Modifier.height(60.dp))
 
             Image(painterResource(R.drawable.logo), null, modifier = Modifier.size(110.dp))
@@ -81,10 +99,17 @@ fun LoginScreen() {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            modernTextField(email, { email = it }, "Email Address", R.drawable.baseline_email_24)
+            // Email
+            modernTextField(
+                value = email,
+                onValueChange = { email = it },
+                placeholder = "Email Address",
+                iconRes = R.drawable.baseline_email_24
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Password
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -106,41 +131,28 @@ fun LoginScreen() {
                 colors = modernFieldColors()
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Text(
-                    "Forgot Password?",
-                    color = Color(0xFF6A4FE9),
-                    modifier = Modifier.clickable {
-                        context.startActivity(Intent(context, ForgotPasswordActivity::class.java))
-                    }
-                )
-            }
-
             Spacer(modifier = Modifier.height(30.dp))
 
+            // Login Button
             Button(
                 onClick = {
-                    if (email.isNotEmpty() && password.isNotEmpty()) {
-                        auth.signInWithEmailAndPassword(email, password)
-                            .addOnCompleteListener(activity) { task ->
-                                dialogMessage = if (task.isSuccessful)
-                                    "Login Successful"
-                                else
-                                    "Login Failed: ${task.exception?.message}"
-                                showDialog = true
-                            }
-                    } else {
-                        dialogMessage = "Please fill all fields"
-                        showDialog = true
-                    }
+                    viewModel.login(email, password)
                 },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A6CF7))
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A6CF7)),
+                enabled = authState.value !is AuthViewModel.AuthState.Loading
             ) {
-                Text("Login", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                if (authState.value is AuthViewModel.AuthState.Loading) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    Text("Login", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
 
             Spacer(modifier = Modifier.height(26.dp))
@@ -153,7 +165,7 @@ fun LoginScreen() {
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable {
                         context.startActivity(Intent(context, RegisterActivity::class.java))
-                        activity.finish()
+                        (context as? ComponentActivity)?.finish()
                     }
                 )
             }

@@ -12,15 +12,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
-import com.example.kotlinproject.modernTextField
-import com.example.kotlinproject.modernFieldColors
-
 
 class ForgotPasswordActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,7 +28,6 @@ class ForgotPasswordActivity : ComponentActivity() {
 
 @Composable
 fun ForgotPasswordScreen() {
-
     var email by remember { mutableStateOf("") }
     var showDialog by remember { mutableStateOf(false) }
     var dialogMessage by remember { mutableStateOf("") }
@@ -51,12 +46,10 @@ fun ForgotPasswordScreen() {
     }
 
     Scaffold(containerColor = Color(0xFFF8F9FC)) { padding ->
-
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Spacer(modifier = Modifier.height(80.dp))
 
             Image(painterResource(R.drawable.logo), null, modifier = Modifier.size(110.dp))
@@ -68,7 +61,12 @@ fun ForgotPasswordScreen() {
 
             Spacer(modifier = Modifier.height(50.dp))
 
-            modernTextField(email, { email = it }, "Email Address", R.drawable.baseline_email_24)
+            modernTextField(
+                value = email,
+                onValueChange = { email = it },
+                placeholder = "Email Address",
+                iconRes = R.drawable.baseline_email_24
+            )
 
             Spacer(modifier = Modifier.height(36.dp))
 

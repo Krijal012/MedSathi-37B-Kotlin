@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,14 +25,26 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.kotlinproject.Repo.UserRepoImpl
+import com.example.kotlinproject.ViewModel.AuthViewModel
+import com.example.kotlinproject.ViewModel.AuthViewModelFactory
 import kotlinx.coroutines.launch
 
 class StaffDashboard : ComponentActivity() {
+
+    private val viewModel: AuthViewModel by viewModels {
+        AuthViewModelFactory(UserRepoImpl())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        viewModel.getCurrentUser()
+
         setContent {
             MaterialTheme {
-                StaffDashboardScreen()
+                StaffDashboardScreen(viewModel)
             }
         }
     }
@@ -37,18 +52,27 @@ class StaffDashboard : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StaffDashboardScreen() {
+fun StaffDashboardScreen(viewModel: AuthViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val lightGray = Color(0xFFF5F5F5)
     val darkBlue = Color(0xFF1E3A5F)
+    val context = LocalContext.current
+    val currentUser = viewModel.currentUser.observeAsState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            StaffDrawerContent(currentScreen = "Dashboard") {
-                scope.launch { drawerState.close() }
-            }
+            StaffDrawerContent(
+                currentScreen = "Dashboard",
+                staffName = currentUser.value?.fullName ?: "Staff",
+                onClose = { scope.launch { drawerState.close() } },
+                onLogout = {
+                    viewModel.logout()
+                    context.startActivity(Intent(context, LoginActivity::class.java))
+                    (context as? ComponentActivity)?.finish()
+                }
+            )
         }
     ) {
         Scaffold(
@@ -68,7 +92,7 @@ fun StaffDashboardScreen() {
                     },
                     actions = {
                         Text(
-                            text = "Welcome, Staff",
+                            text = "Welcome, ${currentUser.value?.fullName ?: "Staff"}",
                             fontSize = 12.sp,
                             color = Color.White,
                             modifier = Modifier.padding(end = 8.dp)
@@ -128,7 +152,7 @@ fun StaffDashboardScreen() {
 
                 repeat(4) {
                     StaffQueueCard(
-                        queueNumber = "001",
+                        queueNumber = "00${it + 1}",
                         patientName = "John Smith",
                         doctorName = "Dr. Ram Shrestha",
                         status = "In Progress",
@@ -144,9 +168,13 @@ fun StaffDashboardScreen() {
 }
 
 @Composable
-fun StaffDrawerContent(currentScreen: String, onClose: () -> Unit) {
+fun StaffDrawerContent(
+    currentScreen: String,
+    staffName: String,
+    onClose: () -> Unit,
+    onLogout: () -> Unit
+) {
     val darkBlue = Color(0xFF1E3A5F)
-    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -157,63 +185,58 @@ fun StaffDrawerContent(currentScreen: String, onClose: () -> Unit) {
     ) {
         Spacer(modifier = Modifier.height(40.dp))
 
+        // User Info
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.AccountCircle,
+                contentDescription = "Profile",
+                tint = Color.White,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = staffName,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Staff Member",
+                    color = Color(0xFFB0BEC5),
+                    fontSize = 12.sp
+                )
+            }
+        }
+
+        Divider(color = Color(0xFF2C5F8D))
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
             text = "MedSathi - Staff",
             color = Color.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier.padding(bottom = 24.dp)
         )
 
-        StaffDrawerMenuItem("Dashboard", Icons.Default.Home, currentScreen == "Dashboard") {
-            onClose()
-            if (currentScreen != "Dashboard") {
-                context.startActivity(Intent(context, StaffDashboard::class.java))
-            }
-        }
-        StaffDrawerMenuItem("Doctor Schedule", Icons.Default.CalendarMonth, currentScreen == "DoctorSchedule") {
-            onClose()
-            if (currentScreen != "DoctorSchedule") {
-                context.startActivity(Intent(context, DoctorScheduleActivity::class.java))
-            }
-        }
-        StaffDrawerMenuItem("Patient Records", Icons.Default.FolderOpen, currentScreen == "PatientRecords") {
-            onClose()
-            if (currentScreen != "PatientRecords") {
-                context.startActivity(Intent(context, PatientRecordsActivity::class.java))
-            }
-        }
-        StaffDrawerMenuItem("Patient Queue", Icons.Default.People, currentScreen == "PatientQueue") {
-            onClose()
-            if (currentScreen != "PatientQueue") {
-                context.startActivity(Intent(context, PatientQueueActivity::class.java))
-            }
+        // Logout Button
+        Spacer(modifier = Modifier.weight(1f))
+        Button(
+            onClick = onLogout,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53E3E))
+        ) {
+            Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Logout")
         }
     }
-}
-
-@Composable
-fun StaffDrawerMenuItem(title: String, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {
-    val backgroundColor = if (isSelected) Color(0xFF2C5F8D) else Color.Transparent
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(backgroundColor, RoundedCornerShape(8.dp))
-            .clickable { onClick() }
-            .padding(vertical = 12.dp, horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = title,
-            tint = Color.White,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(text = title, color = Color.White, fontSize = 14.sp)
-    }
-    Spacer(modifier = Modifier.height(4.dp))
 }
 
 @Composable
@@ -244,7 +267,9 @@ fun StaffStatCard(title: String, value: String, icon: ImageVector, modifier: Mod
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
@@ -291,7 +316,9 @@ fun StaffQueueCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -303,7 +330,12 @@ fun StaffQueueCard(
                 modifier = Modifier.width(70.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = patientName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(
+                    text = patientName,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
                 Text(text = doctorName, fontSize = 14.sp, color = Color(0xFF26D0CE))
             }
             Column(horizontalAlignment = Alignment.End) {

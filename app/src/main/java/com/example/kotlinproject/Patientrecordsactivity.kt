@@ -1,8 +1,10 @@
 package com.example.kotlinproject
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,20 +14,30 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.kotlinproject.Repo.UserRepoImpl
+import com.example.kotlinproject.ViewModel.AuthViewModel
+import com.example.kotlinproject.ViewModel.AuthViewModelFactory
 import kotlinx.coroutines.launch
 
 class PatientRecordsActivity : ComponentActivity() {
+    private val viewModel: AuthViewModel by viewModels {
+        AuthViewModelFactory(UserRepoImpl())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        viewModel.getCurrentUser()
         setContent {
             MaterialTheme {
-                PatientRecordsScreen()
+                PatientRecordsScreen(viewModel)
             }
         }
     }
@@ -33,18 +45,27 @@ class PatientRecordsActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PatientRecordsScreen() {
+fun PatientRecordsScreen(viewModel: AuthViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val lightGray = Color(0xFFF5F5F5)
     val darkBlue = Color(0xFF1E3A5F)
+    val context = LocalContext.current
+    val currentUser = viewModel.currentUser.observeAsState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            StaffDrawerContent(currentScreen = "PatientRecords") {
-                scope.launch { drawerState.close() }
-            }
+            StaffDrawerContent(
+                currentScreen = "PatientRecords",
+                staffName = currentUser.value?.fullName ?: "Staff",
+                onClose = { scope.launch { drawerState.close() } },
+                onLogout = {
+                    viewModel.logout()
+                    context.startActivity(Intent(context, LoginActivity::class.java))
+                    (context as? ComponentActivity)?.finish()
+                }
+            )
         }
     ) {
         Scaffold(
@@ -64,7 +85,7 @@ fun PatientRecordsScreen() {
                     },
                     actions = {
                         Text(
-                            text = "Welcome, Staff",
+                            text = "Welcome, ${currentUser.value?.fullName ?: "Staff"}",
                             fontSize = 12.sp,
                             color = Color.White,
                             modifier = Modifier.padding(end = 8.dp)
@@ -80,7 +101,8 @@ fun PatientRecordsScreen() {
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = darkBlue,
-                        titleContentColor = Color.White
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White
                     )
                 )
             }
@@ -109,7 +131,9 @@ fun PatientRecordsScreen() {
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = Color(0xFFE5E7EB),
-                        focusedBorderColor = Color(0xFF1E3A5F)
+                        focusedBorderColor = Color(0xFF1E3A5F),
+                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = Color.White
                     )
                 )
 
@@ -122,7 +146,6 @@ fun PatientRecordsScreen() {
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        // Header Row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween

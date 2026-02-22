@@ -52,6 +52,15 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.2.1")
     implementation("androidx.activity:activity-compose:1.8.2")
 
+    dependencies {
+        // Add these if they are missing
+        implementation("androidx.compose.runtime:runtime-livedata:1.7.6")
+        implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+
+        // For the Icons warnings
+        implementation("androidx.compose.material:material-icons-extended:1.7.6")
+    }
+
     // Compose BOM and UI dependencies
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -12,11 +15,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.KotlinProject">
 
-        <!-- Patient Dashboard - Main Launcher -->
+        <!-- 1. MAIN ENTRY POINT -->
         <activity
-            android:name=".PatientDashboard"
+            android:name=".SplashScreen"
             android:exported="true"
-            android:label="Patient Dashboard"
             android:theme="@style/Theme.KotlinProject">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -24,127 +26,66 @@
             </intent-filter>
         </activity>
 
-        <!-- Patient Portal Activities -->
+        <!-- 2. AUTHENTICATION -->
         <activity
-            android:name=".BookAppointmentActivity"
+            android:name=".LoginActivity"
             android:exported="true"
-            android:label="Book Appointment"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <activity
-            android:name=".SelectDateTimeActivity"
-            android:exported="true"
-            android:label="Select Date and Time"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <activity
-            android:name=".AppointmentDetailsActivity"
-            android:exported="true"
-            android:label="Appointment Details"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <activity
-            android:name=".MyAppointmentsActivity"
-            android:exported="true"
-            android:label="My Appointments"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <activity
-            android:name=".MedicalHistoryActivity"
-            android:exported="true"
-            android:label="Medical History"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <activity
-            android:name=".DoctorAvailabilityActivity"
-            android:exported="true"
-            android:label="Doctor Availability"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <!-- Staff Dashboard Activities -->
-        <activity
-            android:name=".StaffDashboard"
-            android:exported="true"
-            android:label="Staff Dashboard"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <activity
-            android:name=".DoctorScheduleActivity"
-            android:exported="true"
-            android:label="Doctor Schedule"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <activity
-            android:name=".PatientRecordsActivity"
-            android:exported="true"
-            android:label="Patient Records"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <activity
-            android:name=".ManagePatientsActivity"
-            android:exported="true" />
-
-        <activity android:name=".ManageStaffsActivity" android:exported="true" />
-
-        <activity
-            android:name=".PatientQueueActivity"
-            android:exported="true"
-            android:label="Patient Queue"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <activity android:name=".AddMedicineActivity" android:exported="true" />
-        <activity android:name=".SearchMedicineActivity" android:exported="true" />
-        <activity android:name=".BillingActivity" android:exported="true" />
-
-        <!-- Other Dashboards -->
-        <activity
-            android:name=".PharmacistDashboard"
-            android:exported="true"
-            android:label="Pharmacist Dashboard"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <activity
-            android:name=".AdminDashboard"
-            android:exported="true"
-            android:label="Admin Dashboard"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <!-- Existing Activities -->
-        <activity
-            android:name=".SplashScreen"
-            android:exported="true"
-            android:label="@string/title_activity_splash_screen"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <activity
-            android:name=".ForgotPasswordActivity"
-            android:exported="true"
-            android:label="@string/title_activity_forgot_password"
-            android:theme="@style/Theme.KotlinProject" />
+            android:label="@string/title_activity_login" />
 
         <activity
             android:name=".RegisterActivity"
             android:exported="true"
-            android:label="@string/title_activity_register"
-            android:theme="@style/Theme.KotlinProject" />
+            android:label="@string/title_activity_register" />
 
         <activity
-            android:name=".LoginActivity"
+            android:name=".ForgotPasswordActivity"
             android:exported="true"
-            android:label="@string/title_activity_login"
-            android:theme="@style/Theme.KotlinProject" />
+            android:label="@string/title_activity_forgot_password" />
+
+        <!-- 3. DASHBOARDS -->
+        <activity
+            android:name=".PatientDashboard"
+            android:exported="true"
+            android:label="Patient Dashboard" />
+
+        <activity
+            android:name=".StaffDashboard"
+            android:exported="true"
+            android:label="Staff Dashboard" />
+
+        <activity
+            android:name=".PharmacistDashboard"
+            android:exported="true"
+            android:label="Pharmacist Dashboard" />
+
+        <activity
+            android:name=".AdminDashboard"
+            android:exported="true"
+            android:label="Admin Dashboard" />
+
+        <!-- 4. PATIENT FEATURES -->
+        <activity android:name=".BookAppointmentActivity" android:exported="true" />
+        <activity android:name=".SelectDateTimeActivity" android:exported="true" />
+        <activity android:name=".AppointmentDetailsActivity" android:exported="true" />
+        <activity android:name=".MyAppointmentsActivity" android:exported="true" />
+        <activity android:name=".MedicalHistoryActivity" android:exported="true" />
+        <activity android:name=".DoctorAvailabilityActivity" android:exported="true" />
+
+        <!-- 5. STAFF/ADMIN FEATURES -->
+        <activity android:name=".DoctorScheduleActivity" android:exported="true" />
+        <activity android:name=".PatientRecordsActivity" android:exported="true" />
+        <activity android:name=".ManagePatientsActivity" android:exported="true" />
+        <activity android:name=".ManageStaffsActivity" android:exported="true" />
+        <activity android:name=".PatientQueueActivity" android:exported="true" />
+
+        <!-- 6. PHARMACY & BILLING -->
+        <activity android:name=".AddMedicineActivity" android:exported="true" />
+        <activity android:name=".SearchMedicineActivity" android:exported="true" />
+        <activity android:name=".BillingActivity" android:exported="true" />
 
         <activity
             android:name=".MainActivity"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.KotlinProject" />
-
-        <activity
-            android:name=".PatientDashboardActivity"
-            android:exported="true"
-            />
+            android:exported="true" />
 
     </application>
-
 </manifest>

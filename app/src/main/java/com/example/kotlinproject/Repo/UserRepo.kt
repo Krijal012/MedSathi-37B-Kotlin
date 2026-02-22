@@ -1,30 +1,25 @@
 package com.example.kotlinproject.Repo
 
+import com.example.kotlinproject.Model.User
+
 interface UserRepo {
+    fun register(
+        fullName: String,
+        email: String,
+        password: String,
+        role: String,
+        callback: (Boolean, String, User?) -> Unit
+    )
 
     fun login(
         email: String,
         password: String,
-        callBack: (Boolean, String) -> Unit
+        callback: (Boolean, String, User?) -> Unit
     )
 
-    fun register(
-        username: String,
-        email: String,
-        password: String,
-        callBack: (Boolean, String, String) -> Unit
-    )
+    fun logout()
 
-    fun forgetPassword(
-        email: String,
-        callBack: (Boolean, String) -> Unit
-    )
+    fun getCurrentUser(callback: (User?) -> Unit)
 
-    fun addUserToDatabase(
-        userId: String,
-        username: String,
-        email: String,
-        password: String,
-        callBack: (Boolean, String) -> Unit
-    )
+    fun isUserLoggedIn(): Boolean
 }

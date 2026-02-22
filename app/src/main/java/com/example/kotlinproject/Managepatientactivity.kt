@@ -1,8 +1,10 @@
 package com.example.kotlinproject
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,15 +14,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.kotlinproject.Repo.UserRepoImpl
+import com.example.kotlinproject.ViewModel.AuthViewModel
+import com.example.kotlinproject.ViewModel.AuthViewModelFactory
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -38,11 +42,16 @@ data class Patient(
 )
 
 class ManagePatientsActivity : ComponentActivity() {
+    private val viewModel: AuthViewModel by viewModels {
+        AuthViewModelFactory(UserRepoImpl())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        viewModel.getCurrentUser()
         setContent {
             MaterialTheme {
-                ManagePatientsScreen()
+                ManagePatientsScreen(viewModel)
             }
         }
     }
@@ -50,23 +59,17 @@ class ManagePatientsActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ManagePatientsScreen() {
+fun ManagePatientsScreen(viewModel: AuthViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val lightGray = Color(0xFFF5F5F5)
     val darkBlue = Color(0xFF1E3A5F)
     val teal = Color(0xFF26D0CE)
+    val context = LocalContext.current
+    val currentUser = viewModel.currentUser.observeAsState()
 
     var patients by remember {
-        mutableStateOf<List<Patient>>(
-            listOf(
-                Patient("1", "John Smith", "john@email.com", "9800000001", "32", "Male", "Kathmandu", "A+", "9800000010"),
-                Patient("2", "Jane Doe", "jane@email.com", "9800000002", "28", "Female", "Lalitpur", "B+", "9800000011"),
-                Patient("3", "Ram Prasad", "ram@email.com", "9800000003", "45", "Male", "Bhaktapur", "O+", "9800000012"),
-                Patient("4", "Sita Kumari", "sita@email.com", "9800000004", "35", "Female", "Pokhara", "AB+", "9800000013"),
-                Patient("5", "Hari Bahadur", "hari@email.com", "9800000005", "52", "Male", "Chitwan", "A-", "9800000014")
-            )
-        )
+        mutableStateOf<List<Patient>>(emptyList())
     }
     var isLoading by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -95,9 +98,7 @@ fun ManagePatientsScreen() {
                         emergencyContact = doc.getString("emergencyContact") ?: ""
                     )
                 }
-                if (firestorePatients.isNotEmpty()) {
-                    patients = firestorePatients
-                }
+                patients = firestorePatients
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -112,78 +113,19 @@ fun ManagePatientsScreen() {
                 it.email.contains(searchQuery, ignoreCase = true)
     }
 
-    if (showAddDialog) {
-        PatientFormDialog(
-            title = "Add Patient",
-            onDismiss = { showAddDialog = false },
-            onConfirm = { patientData ->
-                scope.launch {
-                    try {
-                        firestore.collection("patients").add(patientData).await()
-                        refreshData()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                    showAddDialog = false
-                }
-            }
-        )
-    }
-
-    if (showEditDialog && selectedPatient != null) {
-        PatientFormDialog(
-            title = "Edit Patient",
-            initialPatient = selectedPatient,
-            onDismiss = { showEditDialog = false },
-            onConfirm = { updatedData ->
-                scope.launch {
-                    try {
-                        firestore.collection("patients").document(selectedPatient!!.id).update(updatedData).await()
-                        refreshData()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                    showEditDialog = false
-                }
-            }
-        )
-    }
-
-    if (showDeleteDialog && selectedPatient != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Patient") },
-            text = { Text("Are you sure you want to delete ${selectedPatient?.fullName}?") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            try {
-                                firestore.collection("patients").document(selectedPatient!!.id).delete().await()
-                                refreshData()
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
-                            showDeleteDialog = false
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
-            }
-        )
-    }
-
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            AdminDrawerContent(currentScreen = "ManagePatients") {
-                scope.launch { drawerState.close() }
-            }
+            AdminDrawerContent(
+                currentScreen = "ManagePatients",
+                adminName = currentUser.value?.fullName ?: "Admin",
+                onClose = { scope.launch { drawerState.close() } },
+                onLogout = {
+                    viewModel.logout()
+                    context.startActivity(Intent(context, LoginActivity::class.java))
+                    (context as? ComponentActivity)?.finish()
+                }
+            )
         }
     ) {
         Scaffold(
@@ -197,7 +139,7 @@ fun ManagePatientsScreen() {
                     },
                     actions = {
                         Text(
-                            text = "Welcome, Admin",
+                            text = "Welcome, ${currentUser.value?.fullName ?: "Admin"}",
                             fontSize = 12.sp,
                             color = Color.White,
                             modifier = Modifier.padding(end = 8.dp)
@@ -211,7 +153,8 @@ fun ManagePatientsScreen() {
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = darkBlue,
-                        titleContentColor = Color.White
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White
                     )
                 )
             },
@@ -318,71 +261,4 @@ fun PatientCard(patient: Patient, onEdit: (Patient) -> Unit, onDelete: (Patient)
             }
         }
     }
-}
-
-@Composable
-fun StatCard(title: String, value: String, icon: ImageVector, color: Color, modifier: Modifier) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Color.White)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Icon(icon, contentDescription = null, tint = color)
-            Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(title, fontSize = 12.sp, color = Color.Gray)
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun PatientFormDialog(
-    title: String,
-    initialPatient: Patient? = null,
-    onDismiss: () -> Unit,
-    onConfirm: (Map<String, Any>) -> Unit
-) {
-    var name by remember { mutableStateOf(initialPatient?.fullName ?: "") }
-    var email by remember { mutableStateOf(initialPatient?.email ?: "") }
-    var phone by remember { mutableStateOf(initialPatient?.phone ?: "") }
-    var age by remember { mutableStateOf(initialPatient?.age ?: "") }
-    var gender by remember { mutableStateOf(initialPatient?.gender ?: "") }
-    var address by remember { mutableStateOf(initialPatient?.address ?: "") }
-    var bloodGroup by remember { mutableStateOf(initialPatient?.bloodGroup ?: "") }
-    var emergencyContact by remember { mutableStateOf(initialPatient?.emergencyContact ?: "") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Bold) },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full Name") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = age, onValueChange = { age = it }, label = { Text("Age") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = gender, onValueChange = { gender = it }, label = { Text("Gender") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = bloodGroup, onValueChange = { bloodGroup = it }, label = { Text("Blood Group") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Address") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = emergencyContact, onValueChange = { emergencyContact = it }, label = { Text("Emergency Contact") }, modifier = Modifier.fillMaxWidth())
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onConfirm(mapOf(
-                        "fullName" to name,
-                        "email" to email,
-                        "phone" to phone,
-                        "age" to age,
-                        "gender" to gender,
-                        "bloodGroup" to bloodGroup,
-                        "address" to address,
-                        "emergencyContact" to emergencyContact
-                    ))
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF26D0CE))
-            ) { Text("Save") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-    )
 }
