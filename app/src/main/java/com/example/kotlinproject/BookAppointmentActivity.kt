@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -28,7 +29,6 @@ import com.example.kotlinproject.Repo.UserRepoImpl
 import com.example.kotlinproject.ViewModel.AuthViewModel
 import com.example.kotlinproject.ViewModel.AuthViewModelFactory
 import com.example.kotlinproject.ViewModel.PatientViewModel
-import com.example.kotlinproject.ViewModel.PatientViewModelFactory
 import kotlinx.coroutines.launch
 
 class BookAppointmentActivity : ComponentActivity() {
@@ -72,6 +72,12 @@ fun BookAppointmentScreen(authViewModel: AuthViewModel, patientViewModel: Patien
     val currentUser = authViewModel.currentUser.observeAsState()
     val professionals = patientViewModel.professionals.observeAsState(emptyList())
     var selectedProfIndex by remember { mutableIntStateOf(-1) }
+
+    val selectedProfessional = if (selectedProfIndex != -1 && selectedProfIndex < professionals.value.size) {
+        professionals.value[selectedProfIndex]
+    } else null
+
+    val isContinueEnabled = selectedProfessional != null && selectedProfessional.schedule.isNotEmpty()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -151,16 +157,21 @@ fun BookAppointmentScreen(authViewModel: AuthViewModel, patientViewModel: Patien
                                 ) {
                                     chunk.forEachIndexed { colIndex, prof ->
                                         val index = rowIndex * 2 + colIndex
+                                        val hasSchedule = prof.schedule.isNotEmpty()
+                                        
                                         DoctorCard(
-                                            doctorName = prof.fullName,
-                                            specialty = "${prof.role.replaceFirstChar { it.uppercase() }} | ${prof.specialty}",
+                                            doctorName = if (hasSchedule) prof.fullName else "${prof.fullName} (Unavailable)",
+                                            specialty = "${prof.role.replaceFirstChar { it.uppercase() }}${if (!hasSchedule) "" else " | ${prof.specialty}"}",
                                             isSelected = selectedProfIndex == index,
                                             onSelect = { 
                                                 selectedProfIndex = index
                                                 patientViewModel.selectedDoctorName = prof.fullName
                                                 patientViewModel.selectedDoctorSpecialty = prof.specialty
+                                                patientViewModel.selectedDoctorSchedule = prof.schedule
                                             },
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier.weight(1f).then(
+                                                if (!hasSchedule) Modifier.alpha(0.6f) else Modifier
+                                            )
                                         )
                                     }
                                     if (chunk.size == 1) Spacer(modifier = Modifier.weight(1f))
@@ -171,6 +182,16 @@ fun BookAppointmentScreen(authViewModel: AuthViewModel, patientViewModel: Patien
                     }
                 }
 
+                if (selectedProfessional != null && selectedProfessional.schedule.isEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "This professional has not set their schedule yet and cannot be booked.",
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
@@ -179,7 +200,7 @@ fun BookAppointmentScreen(authViewModel: AuthViewModel, patientViewModel: Patien
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = teal),
-                    enabled = selectedProfIndex != -1
+                    enabled = isContinueEnabled
                 ) {
                     Text("Continue", fontSize = 16.sp)
                 }

@@ -121,7 +121,6 @@ fun PatientDashboardScreen(authViewModel: AuthViewModel, patientViewModel: Patie
                 Spacer(modifier = Modifier.height(16.dp))
                 UpcomingAppointmentsCard(upcomingAppointments)
                 Spacer(modifier = Modifier.height(16.dp))
-                HealthMetricsCard()
             }
         }
     }
@@ -178,7 +177,7 @@ fun StatsGrid(upcomingCount: Int) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             StatCard("Medical\nRecords", "12", Icons.Default.Article, Modifier.weight(1f))
-            StatCard("Health\nScore", "82%", Icons.Default.FavoriteBorder, Modifier.weight(1f))
+            StatCard("Recent\nVisits", "5", Icons.Default.History, Modifier.weight(1f))
         }
     }
 }
@@ -277,65 +276,6 @@ fun AppointmentItem(appointment: com.example.kotlinproject.Model.Appointment) {
                 Text(appointment.date, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 Text(appointment.time, fontSize = 10.sp, color = Color.Gray)
             }
-        }
-    }
-}
-
-@Composable
-fun HealthMetricsCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Health Metrics", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(12.dp))
-            HealthMetricItem("Blood Pressure", "120/80", "Normal")
-            Spacer(modifier = Modifier.height(8.dp))
-            HealthMetricItem("Heart Rate", "72 BPM", "Normal")
-            Spacer(modifier = Modifier.height(8.dp))
-            HealthMetricItem("Weight", "70 KG", "Normal")
-        }
-    }
-}
-
-@Composable
-fun HealthMetricItem(title: String, value: String, status: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    Icons.Default.Favorite,
-                    contentDescription = title,
-                    modifier = Modifier.size(20.dp),
-                    tint = Color(0xFF26D0CE)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(title, fontSize = 11.sp, color = Color.Gray)
-                    Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-            Text(
-                status,
-                fontSize = 11.sp,
-                color = Color(0xFF4CAF50),
-                fontWeight = FontWeight.Medium
-            )
         }
     }
 }

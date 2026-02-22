@@ -30,6 +30,7 @@ class PatientViewModel(private val appointmentRepo: AppointmentRepo) : ViewModel
     var selectedDoctorSpecialty: String = ""
     var selectedDate: String = ""
     var selectedTime: String = ""
+    var selectedDoctorSchedule: Map<String, String> = emptyMap()
 
     sealed class BookingState {
         object Idle : BookingState()
