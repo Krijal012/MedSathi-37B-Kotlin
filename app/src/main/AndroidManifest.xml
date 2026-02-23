@@ -76,7 +76,7 @@
         <!-- 5. STAFF/ADMIN FEATURES -->
         <activity android:name=".DoctorScheduleActivity" android:exported="true" />
         <activity android:name=".PatientRecordsActivity" android:exported="true" />
-        <activity android:name=".ManagePatientsActivity" android:exported="true" />
+        <activity android:name=".Managepatientactivity" android:exported="true" />
         <activity android:name=".ManageStaffsActivity" android:exported="true" />
         <activity android:name=".PatientQueueActivity" android:exported="true" />
 

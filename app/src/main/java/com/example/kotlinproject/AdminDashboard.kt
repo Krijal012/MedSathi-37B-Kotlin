@@ -7,7 +7,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,25 +25,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.kotlinproject.Repo.UserRepoImpl
+import com.example.kotlinproject.ViewModel.AdminViewModel
 import com.example.kotlinproject.ViewModel.AuthViewModel
 import com.example.kotlinproject.ViewModel.AuthViewModelFactory
 import kotlinx.coroutines.launch
 
 class AdminDashboard : ComponentActivity() {
 
-    private val viewModel: AuthViewModel by viewModels {
+    private val authViewModel: AuthViewModel by viewModels {
         AuthViewModelFactory(UserRepoImpl())
     }
+    
+    private val adminViewModel: AdminViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        viewModel.getCurrentUser()
+        authViewModel.getCurrentUser()
+        adminViewModel.fetchUsers()
 
         setContent {
             MaterialTheme {
-                AdminDashboardScreen(viewModel)
+                AdminDashboardScreen(authViewModel, adminViewModel)
             }
         }
     }
@@ -52,13 +55,15 @@ class AdminDashboard : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminDashboardScreen(viewModel: AuthViewModel) {
+fun AdminDashboardScreen(authViewModel: AuthViewModel, adminViewModel: AdminViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val lightGray = Color(0xFFF5F5F5)
     val darkBlue = Color(0xFF1E3A5F)
     val context = LocalContext.current
-    val currentUser = viewModel.currentUser.observeAsState()
+    
+    val currentUser = authViewModel.currentUser.observeAsState()
+    val stats = adminViewModel.stats.observeAsState(emptyMap())
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -68,7 +73,7 @@ fun AdminDashboardScreen(viewModel: AuthViewModel) {
                 adminName = currentUser.value?.fullName ?: "Admin",
                 onClose = { scope.launch { drawerState.close() } },
                 onLogout = {
-                    viewModel.logout()
+                    authViewModel.logout()
                     context.startActivity(Intent(context, LoginActivity::class.java))
                     (context as? ComponentActivity)?.finish()
                 }
@@ -85,7 +90,9 @@ fun AdminDashboardScreen(viewModel: AuthViewModel) {
                         }
                     },
                     actions = {
-                        IconButton(onClick = { }) {
+                        IconButton(onClick = { 
+                            context.startActivity(Intent(context, ProfileActivity::class.java))
+                        }) {
                             Icon(Icons.Default.AccountCircle, contentDescription = "Profile")
                         }
                     },
@@ -123,7 +130,10 @@ fun AdminDashboardScreen(viewModel: AuthViewModel) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                AdminStatsGrid()
+                AdminStatsGrid(
+                    patients = stats.value["totalPatients"] ?: 0,
+                    staffs = stats.value["totalStaff"] ?: 0
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -135,89 +145,18 @@ fun AdminDashboardScreen(viewModel: AuthViewModel) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                repeat(6) {
+                // Using some mock data for activity but stats are real
+                repeat(4) {
                     ActivityCard(
-                        title = "New Patient Registered",
-                        name = "John Smith",
-                        time = "5 mins ago"
+                        title = "System Update",
+                        name = "Database Synced Successfully",
+                        time = "Just now"
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
-        }
-    }
-}
-
-@Composable
-fun AdminDrawerContent(
-    currentScreen: String = "Dashboard",
-    adminName: String,
-    onClose: () -> Unit = {},
-    onLogout: () -> Unit = {}
-) {
-    val darkBlue = Color(0xFF1E3A5F)
-
-    Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .width(280.dp)
-            .background(darkBlue)
-            .padding(16.dp)
-    ) {
-        Spacer(modifier = Modifier.height(40.dp))
-
-        // User Info
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Default.AccountCircle,
-                contentDescription = "Profile",
-                tint = Color.White,
-                modifier = Modifier.size(48.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = adminName,
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Administrator",
-                    color = Color(0xFFB0BEC5),
-                    fontSize = 12.sp
-                )
-            }
-        }
-
-        Divider(color = Color(0xFF2C5F8D))
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "MedSathi",
-            color = Color.White,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-
-        // Logout Button
-        Spacer(modifier = Modifier.weight(1f))
-        Button(
-            onClick = onLogout,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53E3E))
-        ) {
-            Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Logout")
         }
     }
 }
@@ -260,7 +199,7 @@ fun AdminWelcomeCard(adminName: String) {
 }
 
 @Composable
-fun AdminStatsGrid() {
+fun AdminStatsGrid(patients: Int, staffs: Int) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -271,13 +210,13 @@ fun AdminStatsGrid() {
         ) {
             AdminStatCard(
                 "Total Patients",
-                "1280",
+                patients.toString(),
                 Icons.Default.People,
                 Modifier.weight(1f)
             )
             AdminStatCard(
                 "Total Staffs",
-                "100",
+                staffs.toString(),
                 Icons.Default.Person,
                 Modifier.weight(1f)
             )
@@ -294,7 +233,7 @@ fun AdminStatsGrid() {
             )
             AdminStatCard(
                 "Monthly Revenue",
-                "Rs 100000",
+                "Rs 100k",
                 Icons.Default.AttachMoney,
                 Modifier.weight(1f)
             )
