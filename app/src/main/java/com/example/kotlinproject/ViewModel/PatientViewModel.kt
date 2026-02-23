@@ -82,6 +82,7 @@ class PatientViewModel(private val appointmentRepo: AppointmentRepo) : ViewModel
 
     fun fetchProfessionals() {
         db.collection("professionals")
+            .whereEqualTo("role", "pharmacist")
             .get()
             .addOnSuccessListener { snapshot ->
                 val list = snapshot.toObjects(HealthcareProfessional::class.java)

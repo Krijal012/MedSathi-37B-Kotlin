@@ -60,6 +60,9 @@ fun PatientDrawerContent(
         PatientDrawerMenuItem("Dashboard", Icons.Default.Home, currentScreen == "Dashboard") {
             onClose(); if (currentScreen != "Dashboard") context.startActivity(Intent(context, PatientDashboard::class.java))
         }
+        PatientDrawerMenuItem("Profile", Icons.Default.Person, currentScreen == "Profile") {
+            onClose(); if (currentScreen != "Profile") context.startActivity(Intent(context, ProfileActivity::class.java))
+        }
         PatientDrawerMenuItem("Book Appointment", Icons.Default.DateRange, currentScreen == "BookAppointment") {
             onClose(); if (currentScreen != "BookAppointment") context.startActivity(Intent(context, BookAppointmentActivity::class.java))
         }

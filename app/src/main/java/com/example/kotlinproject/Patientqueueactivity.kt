@@ -26,22 +26,25 @@ import androidx.compose.ui.unit.sp
 import com.example.kotlinproject.Repo.UserRepoImpl
 import com.example.kotlinproject.ViewModel.AuthViewModel
 import com.example.kotlinproject.ViewModel.AuthViewModelFactory
+import com.example.kotlinproject.ViewModel.StaffViewModel
 import kotlinx.coroutines.launch
 
 class PatientQueueActivity : ComponentActivity() {
-    private val viewModel: AuthViewModel by viewModels {
+    private val authViewModel: AuthViewModel by viewModels {
         AuthViewModelFactory(UserRepoImpl())
     }
+    private val staffViewModel: StaffViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        viewModel.getCurrentUser()
+        authViewModel.getCurrentUser()
+        staffViewModel.fetchAllAppointments()
         
         setContent {
             MaterialTheme {
-                PatientQueueScreen(viewModel)
+                PatientQueueScreen(authViewModel, staffViewModel)
             }
         }
     }
@@ -49,13 +52,18 @@ class PatientQueueActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PatientQueueScreen(viewModel: AuthViewModel) {
+fun PatientQueueScreen(authViewModel: AuthViewModel, staffViewModel: StaffViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val lightGray = Color(0xFFF5F5F5)
     val darkBlue = Color(0xFF1E3A5F)
     val context = LocalContext.current
-    val currentUser = viewModel.currentUser.observeAsState()
+    
+    val currentUser = authViewModel.currentUser.observeAsState()
+    val appointments = staffViewModel.appointments.observeAsState(emptyList())
+    
+    // Filter for upcoming (waiting) patients
+    val queue = appointments.value.filter { it.status == "Upcoming" }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -65,7 +73,7 @@ fun PatientQueueScreen(viewModel: AuthViewModel) {
                 staffName = currentUser.value?.fullName ?: "Staff",
                 onClose = { scope.launch { drawerState.close() } },
                 onLogout = {
-                    viewModel.logout()
+                    authViewModel.logout()
                     context.startActivity(Intent(context, LoginActivity::class.java))
                     (context as? ComponentActivity)?.finish()
                 }
@@ -75,33 +83,11 @@ fun PatientQueueScreen(viewModel: AuthViewModel) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = {
-                        Text(
-                            "MedSathi - Staff",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
+                    title = { Text("Patient Queue") },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                            Icon(Icons.Default.Menu, contentDescription = "Menu")
                         }
-                    },
-                    actions = {
-                        Text(
-                            text = "Welcome, ${currentUser.value?.fullName ?: "Staff"}",
-                            fontSize = 12.sp,
-                            color = Color.White,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Profile",
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .padding(end = 8.dp)
-                        )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = darkBlue,
@@ -119,20 +105,29 @@ fun PatientQueueScreen(viewModel: AuthViewModel) {
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
-                Text(text = "Patient Queue", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(text = "Manage patient waiting queue", fontSize = 14.sp, color = Color.Gray)
+                Text(text = "Patients Waiting", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Current queue of patients waiting for consultation", fontSize = 14.sp, color = Color.Gray)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                repeat(6) {
-                    PatientQueueCard(
-                        queueNumber = "001",
-                        patientName = "John Smith",
-                        doctorName = "Dr Ram Shrestha",
-                        estimatedWait = "Est. wait: 0 mins",
-                        status = "In Progress"
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
+                if (queue.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                        Text("Queue is currently empty", color = Color.Gray)
+                    }
+                } else {
+                    queue.forEachIndexed { index, appt ->
+                        PatientQueueCard(
+                            queueNumber = String.format("%03d", index + 1),
+                            patientName = appt.patientName,
+                            doctorName = appt.doctorName,
+                            time = appt.time,
+                            status = appt.status,
+                            onComplete = {
+                                staffViewModel.updateAppointmentStatus(appt.id, "Completed")
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                 }
             }
         }
@@ -144,8 +139,9 @@ fun PatientQueueCard(
     queueNumber: String,
     patientName: String,
     doctorName: String,
-    estimatedWait: String,
-    status: String
+    time: String,
+    status: String,
+    onComplete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -159,7 +155,7 @@ fun PatientQueueCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                color = Color(0xFFE5E7EB),
+                color = Color(0xFFE0F2F1),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.size(50.dp)
             ) {
@@ -168,7 +164,7 @@ fun PatientQueueCard(
                         text = queueNumber,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1E3A5F)
+                        color = Color(0xFF00695C)
                     )
                 }
             }
@@ -176,28 +172,18 @@ fun PatientQueueCard(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = patientName, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Text(text = doctorName, fontSize = 12.sp, color = Color.Gray)
-                Text(text = estimatedWait, fontSize = 11.sp, color = Color.Gray)
+                Text(text = patientName, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text(text = doctorName, fontSize = 13.sp, color = Color(0xFF1E3A5F))
+                Text(text = "Scheduled: $time", fontSize = 11.sp, color = Color.Gray)
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Surface(color = Color(0xFF6B7280), shape = RoundedCornerShape(8.dp)) {
-                    Text(
-                        text = status,
-                        fontSize = 11.sp,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
-                }
-                IconButton(onClick = {}, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Complete",
-                        tint = Color(0xFF26D0CE),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+            IconButton(onClick = onComplete) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Mark as Completed",
+                    tint = Color(0xFF26D0CE),
+                    modifier = Modifier.size(32.dp)
+                )
             }
         }
     }

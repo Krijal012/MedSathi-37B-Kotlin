@@ -2,6 +2,7 @@ package com.example.kotlinproject
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -26,22 +27,25 @@ import androidx.compose.ui.unit.sp
 import com.example.kotlinproject.Repo.UserRepoImpl
 import com.example.kotlinproject.ViewModel.AuthViewModel
 import com.example.kotlinproject.ViewModel.AuthViewModelFactory
+import com.example.kotlinproject.ViewModel.StaffViewModel
 import kotlinx.coroutines.launch
 
 class DoctorScheduleActivity : ComponentActivity() {
-    private val viewModel: AuthViewModel by viewModels {
+    private val authViewModel: AuthViewModel by viewModels {
         AuthViewModelFactory(UserRepoImpl())
     }
+    private val staffViewModel: StaffViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        viewModel.getCurrentUser()
+        authViewModel.getCurrentUser()
+        staffViewModel.fetchPharmacists()
 
         setContent {
             MaterialTheme {
-                DoctorScheduleScreen(viewModel)
+                DoctorScheduleScreen(authViewModel, staffViewModel)
             }
         }
     }
@@ -49,13 +53,15 @@ class DoctorScheduleActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DoctorScheduleScreen(viewModel: AuthViewModel) {
+fun DoctorScheduleScreen(authViewModel: AuthViewModel, staffViewModel: StaffViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val lightGray = Color(0xFFF5F5F5)
     val darkBlue = Color(0xFF1E3A5F)
     val context = LocalContext.current
-    val currentUser = viewModel.currentUser.observeAsState()
+    
+    val currentUser = authViewModel.currentUser.observeAsState()
+    val pharmacists = staffViewModel.professionals.observeAsState(emptyList())
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -65,7 +71,7 @@ fun DoctorScheduleScreen(viewModel: AuthViewModel) {
                 staffName = currentUser.value?.fullName ?: "Staff",
                 onClose = { scope.launch { drawerState.close() } },
                 onLogout = {
-                    viewModel.logout()
+                    authViewModel.logout()
                     context.startActivity(Intent(context, LoginActivity::class.java))
                     (context as? ComponentActivity)?.finish()
                 }
@@ -75,33 +81,11 @@ fun DoctorScheduleScreen(viewModel: AuthViewModel) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = {
-                        Text(
-                            "MedSathi - Staff",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
+                    title = { Text("Pharmacist Schedules") },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                            Icon(Icons.Default.Menu, contentDescription = "Menu")
                         }
-                    },
-                    actions = {
-                        Text(
-                            text = "Welcome, ${currentUser.value?.fullName ?: "Staff"}",
-                            fontSize = 12.sp,
-                            color = Color.White,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Profile",
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .padding(end = 8.dp)
-                        )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = darkBlue,
@@ -119,14 +103,28 @@ fun DoctorScheduleScreen(viewModel: AuthViewModel) {
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
-                Text(text = "Doctor Schedules", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(text = "Manage doctor working hours", fontSize = 14.sp, color = Color.Gray)
+                Text(text = "Manage Pharmacists", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Only registered pharmacists with set schedules can be edited", fontSize = 14.sp, color = Color.Gray)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                repeat(4) {
-                    DoctorScheduleCard(doctorName = "Dr. Ram Shrestha", specialty = "Cardiologist")
-                    Spacer(modifier = Modifier.height(12.dp))
+                if (pharmacists.value.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text("No pharmacists found", color = Color.Gray)
+                    }
+                } else {
+                    pharmacists.value.forEach { pharmacist ->
+                        PharmacistScheduleCard(
+                            name = pharmacist.fullName,
+                            specialty = pharmacist.specialty,
+                            schedule = pharmacist.schedule,
+                            onEdit = {
+                                Toast.makeText(context, "Editing ${pharmacist.fullName}", Toast.LENGTH_SHORT).show()
+                                // Logic to navigate to an edit screen or open a dialog could go here
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                 }
             }
         }
@@ -134,8 +132,14 @@ fun DoctorScheduleScreen(viewModel: AuthViewModel) {
 }
 
 @Composable
-fun DoctorScheduleCard(doctorName: String, specialty: String) {
-    val days = listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+fun PharmacistScheduleCard(
+    name: String,
+    specialty: String,
+    schedule: Map<String, String>,
+    onEdit: () -> Unit
+) {
+    val isScheduleSet = schedule.isNotEmpty()
+    val days = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri")
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -144,38 +148,85 @@ fun DoctorScheduleCard(doctorName: String, specialty: String) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.MedicalServices,
-                    contentDescription = "Doctor",
-                    tint = Color(0xFF26D0CE),
-                    modifier = Modifier.size(32.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(text = doctorName, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text(text = specialty, fontSize = 12.sp, color = Color.Gray)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Icon(
+                        imageVector = Icons.Default.LocalPharmacy,
+                        contentDescription = "Pharmacist",
+                        tint = if (isScheduleSet) Color(0xFF26D0CE) else Color.Gray,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(text = name, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text(text = specialty, fontSize = 12.sp, color = Color.Gray)
+                    }
+                }
+                
+                Button(
+                    onClick = onEdit,
+                    enabled = isScheduleSet,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF1E3A5F),
+                        disabledContainerColor = Color(0xFFE5E7EB)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    Text(if (isScheduleSet) "Edit" else "Blocked", fontSize = 12.sp)
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                days.forEach { day ->
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Surface(color = Color(0xFFE5E7EB), shape = RoundedCornerShape(6.dp)) {
-                            Column(
-                                modifier = Modifier.padding(6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+            if (!isScheduleSet) {
+                Text(
+                    "Pharmacist has not fixed their time and day yet.",
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    days.forEach { day ->
+                        val fullDay = when(day) {
+                            "Sun" -> "Sunday"
+                            "Mon" -> "Monday"
+                            "Tue" -> "Tuesday"
+                            "Wed" -> "Wednesday"
+                            "Thu" -> "Thursday"
+                            "Fri" -> "Friday"
+                            else -> ""
+                        }
+                        val time = schedule[fullDay] ?: "Off"
+                        
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Surface(
+                                color = if (time != "Off") Color(0xFFE0F7FA) else Color(0xFFF3F4F6),
+                                shape = RoundedCornerShape(6.dp)
                             ) {
-                                Text(text = day.take(3), fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                                Text(text = "9AM-4PM", fontSize = 8.sp, color = Color.Gray)
+                                Column(
+                                    modifier = Modifier.padding(vertical = 6.dp, horizontal = 2.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(text = day, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        text = time,
+                                        fontSize = 8.sp,
+                                        color = if (time != "Off") Color(0xFF006064) else Color.Gray,
+                                        maxLines = 1
+                                    )
+                                }
                             }
                         }
                     }

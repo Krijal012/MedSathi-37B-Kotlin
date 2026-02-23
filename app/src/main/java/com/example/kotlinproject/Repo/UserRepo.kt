@@ -22,4 +22,6 @@ interface UserRepo {
     fun getCurrentUser(callback: (User?) -> Unit)
 
     fun isUserLoggedIn(): Boolean
+
+    fun updateProfile(user: User, callback: (Boolean, String) -> Unit)
 }

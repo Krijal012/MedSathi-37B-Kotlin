@@ -2,6 +2,7 @@ package com.example.kotlinproject
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -22,22 +23,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.kotlinproject.Model.MedicalRecord
 import com.example.kotlinproject.Repo.UserRepoImpl
 import com.example.kotlinproject.ViewModel.AuthViewModel
 import com.example.kotlinproject.ViewModel.AuthViewModelFactory
+import com.example.kotlinproject.ViewModel.StaffViewModel
 import kotlinx.coroutines.launch
 
 class PatientRecordsActivity : ComponentActivity() {
-    private val viewModel: AuthViewModel by viewModels {
+    private val authViewModel: AuthViewModel by viewModels {
         AuthViewModelFactory(UserRepoImpl())
     }
+    private val staffViewModel: StaffViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewModel.getCurrentUser()
+        authViewModel.getCurrentUser()
+        staffViewModel.fetchMedicalRecords()
+        
         setContent {
             MaterialTheme {
-                PatientRecordsScreen(viewModel)
+                PatientRecordsScreen(authViewModel, staffViewModel)
             }
         }
     }
@@ -45,13 +51,20 @@ class PatientRecordsActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PatientRecordsScreen(viewModel: AuthViewModel) {
+fun PatientRecordsScreen(authViewModel: AuthViewModel, staffViewModel: StaffViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val lightGray = Color(0xFFF5F5F5)
     val darkBlue = Color(0xFF1E3A5F)
     val context = LocalContext.current
-    val currentUser = viewModel.currentUser.observeAsState()
+    val currentUser = authViewModel.currentUser.observeAsState()
+    val records = staffViewModel.medicalRecords.observeAsState(emptyList())
+    
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredRecords = records.value.filter { 
+        it.patientName.contains(searchQuery, ignoreCase = true) || 
+        it.diagnosis.contains(searchQuery, ignoreCase = true)
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -61,7 +74,7 @@ fun PatientRecordsScreen(viewModel: AuthViewModel) {
                 staffName = currentUser.value?.fullName ?: "Staff",
                 onClose = { scope.launch { drawerState.close() } },
                 onLogout = {
-                    viewModel.logout()
+                    authViewModel.logout()
                     context.startActivity(Intent(context, LoginActivity::class.java))
                     (context as? ComponentActivity)?.finish()
                 }
@@ -71,33 +84,11 @@ fun PatientRecordsScreen(viewModel: AuthViewModel) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = {
-                        Text(
-                            "MedSathi - Staff",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
+                    title = { Text("Patient Records") },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                            Icon(Icons.Default.Menu, contentDescription = "Menu")
                         }
-                    },
-                    actions = {
-                        Text(
-                            text = "Welcome, ${currentUser.value?.fullName ?: "Staff"}",
-                            fontSize = 12.sp,
-                            color = Color.White,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Profile",
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .padding(end = 8.dp)
-                        )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = darkBlue,
@@ -122,16 +113,14 @@ fun PatientRecordsScreen(viewModel: AuthViewModel) {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 OutlinedTextField(
-                    value = "",
-                    onValueChange = {},
-                    placeholder = { Text("Search Patients...", fontSize = 14.sp, color = Color.Gray) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray) },
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search by name or diagnosis...", fontSize = 14.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = Color(0xFFE5E7EB),
-                        focusedBorderColor = Color(0xFF1E3A5F),
                         unfocusedContainerColor = Color.White,
                         focusedContainerColor = Color.White
                     )
@@ -140,7 +129,7 @@ fun PatientRecordsScreen(viewModel: AuthViewModel) {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().weight(1f),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -150,59 +139,60 @@ fun PatientRecordsScreen(viewModel: AuthViewModel) {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Patient", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f))
-                            Text("Last Visit", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                            Text("Diagnosis", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                            Text("Doctor", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.8f))
-                            Box(modifier = Modifier.width(80.dp))
+                            Text("Patient", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f))
+                            Text("Last Visit", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            Text("Diagnosis", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            Text("Pharmacist", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            Spacer(modifier = Modifier.width(70.dp))
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
                         HorizontalDivider(color = Color(0xFFE5E7EB))
 
-                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                            repeat(4) {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                PatientRecordRow(
-                                    patientName = "John Smith",
-                                    lastVisit = "Jan 10, 2025",
-                                    diagnosis = "Flu Symptoms",
-                                    doctor = "Dr. Ram Shrestha"
-                                )
+                        if (filteredRecords.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("No records found", color = Color.Gray)
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                        } else {
+                            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                                filteredRecords.forEach { record ->
+                                    PatientRecordRow(record) {
+                                        Toast.makeText(context, "Update logic for ${record.patientName}", Toast.LENGTH_SHORT).show()
+                                    }
+                                    HorizontalDivider(color = Color(0xFFF3F4F6))
+                                }
+                            }
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 }
 
 @Composable
-fun PatientRecordRow(
-    patientName: String,
-    lastVisit: String,
-    diagnosis: String,
-    doctor: String
-) {
+fun PatientRecordRow(record: MedicalRecord, onUpdate: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(patientName, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1.2f))
-        Text(lastVisit, fontSize = 11.sp, color = Color.Gray, modifier = Modifier.weight(1f), lineHeight = 16.sp)
-        Text(diagnosis, fontSize = 11.sp, color = Color.Gray, modifier = Modifier.weight(1f), lineHeight = 16.sp)
-        Text(doctor, fontSize = 11.sp, color = Color.Gray, modifier = Modifier.weight(0.8f), lineHeight = 16.sp)
+        Column(modifier = Modifier.weight(1.2f)) {
+            Text(record.patientName, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        }
+        Text(record.date, fontSize = 11.sp, color = Color.Gray, modifier = Modifier.weight(1f))
+        Text(record.diagnosis, fontSize = 11.sp, color = Color.Gray, modifier = Modifier.weight(1f))
+        Text(record.doctorName, fontSize = 11.sp, color = Color.Gray, modifier = Modifier.weight(1f))
+        
         Button(
-            onClick = {},
+            onClick = onUpdate,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A5F)),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.width(80.dp)
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.height(32.dp).width(70.dp)
         ) {
-            Text("Update", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Medium)
+            Text("Update", fontSize = 10.sp, color = Color.White)
         }
     }
 }

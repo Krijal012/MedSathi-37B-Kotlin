@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -115,7 +116,12 @@ fun PatientDashboardScreen(authViewModel: AuthViewModel, patientViewModel: Patie
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
-                WelcomeHeader(patientName = currentUser.value?.fullName ?: "Patient")
+                WelcomeHeader(
+                    patientName = currentUser.value?.fullName ?: "Patient",
+                    onProfileClick = {
+                        context.startActivity(Intent(context, ProfileActivity::class.java))
+                    }
+                )
                 Spacer(modifier = Modifier.height(16.dp))
                 StatsGrid(upcomingCount = upcomingAppointments.size)
                 Spacer(modifier = Modifier.height(16.dp))
@@ -127,7 +133,7 @@ fun PatientDashboardScreen(authViewModel: AuthViewModel, patientViewModel: Patie
 }
 
 @Composable
-fun WelcomeHeader(patientName: String) {
+fun WelcomeHeader(patientName: String, onProfileClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -152,7 +158,9 @@ fun WelcomeHeader(patientName: String) {
             Icon(
                 Icons.Default.AccountCircle,
                 contentDescription = "Profile",
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable { onProfileClick() },
                 tint = Color(0xFF1E3A5F)
             )
         }

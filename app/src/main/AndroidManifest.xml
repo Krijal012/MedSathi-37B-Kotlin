@@ -71,6 +71,7 @@
         <activity android:name=".MyAppointmentsActivity" android:exported="true" />
         <activity android:name=".MedicalHistoryActivity" android:exported="true" />
         <activity android:name=".DoctorAvailabilityActivity" android:exported="true" />
+        <activity android:name=".ProfileActivity" android:exported="true" />
 
         <!-- 5. STAFF/ADMIN FEATURES -->
         <activity android:name=".DoctorScheduleActivity" android:exported="true" />

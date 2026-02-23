@@ -53,11 +53,9 @@ class UserRepoImpl : UserRepo {
                         createdAt = System.currentTimeMillis()
                     )
 
-                    // Save to users collection
                     usersCollection.document(userId)
                         .set(user)
                         .addOnSuccessListener {
-                            // If pharmacist or doctor, also save to professionals collection
                             if (user.role == "pharmacist" || user.role == "staff") {
                                 val professionalData = mapOf(
                                     "uid" to userId,
@@ -137,4 +135,14 @@ class UserRepoImpl : UserRepo {
     }
 
     override fun isUserLoggedIn(): Boolean = auth.currentUser != null
+
+    override fun updateProfile(user: User, callback: (Boolean, String) -> Unit) {
+        usersCollection.document(user.uid).set(user)
+            .addOnSuccessListener {
+                callback(true, "Profile updated successfully")
+            }
+            .addOnFailureListener { e ->
+                callback(false, "Failed to update profile: ${e.message}")
+            }
+    }
 }

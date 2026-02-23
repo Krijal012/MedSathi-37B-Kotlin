@@ -28,23 +28,28 @@ import androidx.compose.ui.unit.sp
 import com.example.kotlinproject.Repo.UserRepoImpl
 import com.example.kotlinproject.ViewModel.AuthViewModel
 import com.example.kotlinproject.ViewModel.AuthViewModelFactory
+import com.example.kotlinproject.ViewModel.StaffViewModel
 import kotlinx.coroutines.launch
 
 class StaffDashboard : ComponentActivity() {
 
-    private val viewModel: AuthViewModel by viewModels {
+    private val authViewModel: AuthViewModel by viewModels {
         AuthViewModelFactory(UserRepoImpl())
     }
+    
+    private val staffViewModel: StaffViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        viewModel.getCurrentUser()
+        authViewModel.getCurrentUser()
+        staffViewModel.fetchAllAppointments()
+        staffViewModel.fetchDoctorCount()
 
         setContent {
             MaterialTheme {
-                StaffDashboardScreen(viewModel)
+                StaffDashboardScreen(authViewModel, staffViewModel)
             }
         }
     }
@@ -52,13 +57,17 @@ class StaffDashboard : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StaffDashboardScreen(viewModel: AuthViewModel) {
+fun StaffDashboardScreen(authViewModel: AuthViewModel, staffViewModel: StaffViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val lightGray = Color(0xFFF5F5F5)
     val darkBlue = Color(0xFF1E3A5F)
     val context = LocalContext.current
-    val currentUser = viewModel.currentUser.observeAsState()
+    
+    val currentUser = authViewModel.currentUser.observeAsState()
+    val appointments = staffViewModel.appointments.observeAsState(emptyList())
+    val stats = staffViewModel.stats.observeAsState(emptyMap())
+    val doctorCount = staffViewModel.doctorCount.observeAsState(0)
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -68,7 +77,7 @@ fun StaffDashboardScreen(viewModel: AuthViewModel) {
                 staffName = currentUser.value?.fullName ?: "Staff",
                 onClose = { scope.launch { drawerState.close() } },
                 onLogout = {
-                    viewModel.logout()
+                    authViewModel.logout()
                     context.startActivity(Intent(context, LoginActivity::class.java))
                     (context as? ComponentActivity)?.finish()
                 }
@@ -92,7 +101,7 @@ fun StaffDashboardScreen(viewModel: AuthViewModel) {
                     },
                     actions = {
                         Text(
-                            text = "Welcome, ${currentUser.value?.fullName ?: "Staff"}",
+                            text = currentUser.value?.fullName ?: "Staff",
                             fontSize = 12.sp,
                             color = Color.White,
                             modifier = Modifier.padding(end = 8.dp)
@@ -104,6 +113,9 @@ fun StaffDashboardScreen(viewModel: AuthViewModel) {
                             modifier = Modifier
                                 .size(32.dp)
                                 .padding(end = 8.dp)
+                                .clickable {
+                                    context.startActivity(Intent(context, ProfileActivity::class.java))
+                                }
                         )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -137,7 +149,12 @@ fun StaffDashboardScreen(viewModel: AuthViewModel) {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                StaffStatsGrid()
+                StaffStatsGrid(
+                    totalQueue = stats.value["total"] ?: 0,
+                    inQueue = stats.value["upcoming"] ?: 0,
+                    completed = stats.value["completed"] ?: 0,
+                    doctorsAvailable = doctorCount.value
+                )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
@@ -150,15 +167,21 @@ fun StaffDashboardScreen(viewModel: AuthViewModel) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                repeat(4) {
-                    StaffQueueCard(
-                        queueNumber = "00${it + 1}",
-                        patientName = "John Smith",
-                        doctorName = "Dr. Ram Shrestha",
-                        status = "In Progress",
-                        time = "5 Mins"
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                if (appointments.value.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        Text("No appointments found", color = Color.Gray)
+                    }
+                } else {
+                    appointments.value.take(10).forEachIndexed { index, appt ->
+                        StaffQueueCard(
+                            queueNumber = String.format("%03d", index + 1),
+                            patientName = appt.patientName,
+                            doctorName = appt.doctorName,
+                            status = appt.status,
+                            time = appt.time
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -175,6 +198,7 @@ fun StaffDrawerContent(
     onLogout: () -> Unit
 ) {
     val darkBlue = Color(0xFF1E3A5F)
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -214,16 +238,21 @@ fun StaffDrawerContent(
             }
         }
 
-        Divider(color = Color(0xFF2C5F8D))
+        HorizontalDivider(color = Color(0xFF2C5F8D))
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "MedSathi - Staff",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
+        StaffDrawerMenuItem("Dashboard", Icons.Default.Dashboard, currentScreen == "Dashboard") {
+            onClose(); if (currentScreen != "Dashboard") context.startActivity(Intent(context, StaffDashboard::class.java))
+        }
+        StaffDrawerMenuItem("Doctor Schedule", Icons.Default.CalendarToday, currentScreen == "DoctorSchedule") {
+            onClose(); if (currentScreen != "DoctorSchedule") context.startActivity(Intent(context, DoctorScheduleActivity::class.java))
+        }
+        StaffDrawerMenuItem("Patient Records", Icons.Default.FolderShared, currentScreen == "PatientRecords") {
+            onClose(); if (currentScreen != "PatientRecords") context.startActivity(Intent(context, PatientRecordsActivity::class.java))
+        }
+        StaffDrawerMenuItem("Patient Queue", Icons.Default.Queue, currentScreen == "PatientQueue") {
+            onClose(); if (currentScreen != "PatientQueue") context.startActivity(Intent(context, PatientQueueActivity::class.java))
+        }
 
         // Logout Button
         Spacer(modifier = Modifier.weight(1f))
@@ -240,21 +269,39 @@ fun StaffDrawerContent(
 }
 
 @Composable
-fun StaffStatsGrid() {
+fun StaffDrawerMenuItem(title: String, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {
+    val backgroundColor = if (isSelected) Color(0xFF2C5F8D) else Color.Transparent
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundColor, RoundedCornerShape(8.dp))
+            .clickable { onClick() }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, title, tint = Color.White, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(title, color = Color.White, fontSize = 14.sp)
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+}
+
+@Composable
+fun StaffStatsGrid(totalQueue: Int, inQueue: Int, completed: Int, doctorsAvailable: Int) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        StaffStatCard("Patients Queue", "20", Icons.Default.People, Modifier.weight(1f))
-        StaffStatCard("In Queue", "8", Icons.Default.AccessTime, Modifier.weight(1f))
+        StaffStatCard("Patients Queue", totalQueue.toString(), Icons.Default.People, Modifier.weight(1f))
+        StaffStatCard("In Queue", inQueue.toString(), Icons.Default.AccessTime, Modifier.weight(1f))
     }
     Spacer(modifier = Modifier.height(12.dp))
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        StaffStatCard("Completed", "12", Icons.Default.CheckCircle, Modifier.weight(1f))
-        StaffStatCard("Doctors Available", "15", Icons.Default.MedicalServices, Modifier.weight(1f))
+        StaffStatCard("Completed", completed.toString(), Icons.Default.CheckCircle, Modifier.weight(1f))
+        StaffStatCard("Doctors Available", doctorsAvailable.toString(), Icons.Default.MedicalServices, Modifier.weight(1f))
     }
 }
 
@@ -279,7 +326,7 @@ fun StaffStatCard(title: String, value: String, icon: ImageVector, modifier: Mod
             ) {
                 Text(
                     text = title,
-                    fontSize = 13.sp,
+                    fontSize = 11.sp,
                     color = Color.Gray,
                     fontWeight = FontWeight.Normal,
                     modifier = Modifier.weight(1f)
@@ -293,10 +340,10 @@ fun StaffStatCard(title: String, value: String, icon: ImageVector, modifier: Mod
                         "Completed" -> Color(0xFF26D0CE)
                         else -> Color(0xFF3B82F6)
                     },
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
-            Text(text = value, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            Text(text = value, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.Black)
         }
     }
 }
@@ -324,32 +371,38 @@ fun StaffQueueCard(
         ) {
             Text(
                 text = queueNumber,
-                fontSize = 32.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF6B7280),
-                modifier = Modifier.width(70.dp)
+                modifier = Modifier.width(60.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = patientName,
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
-                Text(text = doctorName, fontSize = 14.sp, color = Color(0xFF26D0CE))
+                Text(text = doctorName, fontSize = 13.sp, color = Color(0xFF26D0CE))
             }
             Column(horizontalAlignment = Alignment.End) {
-                Surface(color = Color(0xFF6B7280), shape = RoundedCornerShape(20.dp)) {
+                val statusColor = when(status) {
+                    "Completed" -> Color(0xFF26D0CE)
+                    "Upcoming" -> Color(0xFF84CC16)
+                    "Cancelled" -> Color(0xFFE53E3E)
+                    else -> Color(0xFF6B7280)
+                }
+                Surface(color = statusColor, shape = RoundedCornerShape(20.dp)) {
                     Text(
                         text = status,
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         color = Color.White,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         fontWeight = FontWeight.Medium
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = time, fontSize = 12.sp, color = Color.Gray)
+                Text(text = time, fontSize = 11.sp, color = Color.Gray)
             }
         }
     }
