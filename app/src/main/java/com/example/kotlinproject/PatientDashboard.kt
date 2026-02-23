@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,12 +20,15 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.kotlinproject.Repo.AppointmentRepo
 import com.example.kotlinproject.Repo.UserRepoImpl
 import com.example.kotlinproject.ViewModel.AuthViewModel
@@ -82,6 +86,7 @@ fun PatientDashboardScreen(authViewModel: AuthViewModel, patientViewModel: Patie
             PatientDrawerContent(
                 currentScreen = "Dashboard",
                 patientName = currentUser.value?.fullName ?: "Patient",
+                profilePhotoUrl = currentUser.value?.profilePhotoUrl ?: "",
                 onClose = { scope.launch { drawerState.close() } },
                 onLogout = {
                     authViewModel.logout()
@@ -118,6 +123,7 @@ fun PatientDashboardScreen(authViewModel: AuthViewModel, patientViewModel: Patie
             ) {
                 WelcomeHeader(
                     patientName = currentUser.value?.fullName ?: "Patient",
+                    profilePhotoUrl = currentUser.value?.profilePhotoUrl ?: "",
                     onProfileClick = {
                         context.startActivity(Intent(context, ProfileActivity::class.java))
                     }
@@ -133,7 +139,7 @@ fun PatientDashboardScreen(authViewModel: AuthViewModel, patientViewModel: Patie
 }
 
 @Composable
-fun WelcomeHeader(patientName: String, onProfileClick: () -> Unit) {
+fun WelcomeHeader(patientName: String, profilePhotoUrl: String, onProfileClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -155,14 +161,26 @@ fun WelcomeHeader(patientName: String, onProfileClick: () -> Unit) {
                     color = Color(0xFF1E3A5F)
                 )
             }
-            Icon(
-                Icons.Default.AccountCircle,
-                contentDescription = "Profile",
-                modifier = Modifier
-                    .size(40.dp)
-                    .clickable { onProfileClick() },
-                tint = Color(0xFF1E3A5F)
-            )
+            if (profilePhotoUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = profilePhotoUrl,
+                    contentDescription = "Profile",
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .clickable { onProfileClick() },
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    Icons.Default.AccountCircle,
+                    contentDescription = "Profile",
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clickable { onProfileClick() },
+                    tint = Color(0xFF1E3A5F)
+                )
+            }
         }
     }
 }

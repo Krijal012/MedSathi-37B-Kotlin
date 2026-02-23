@@ -19,11 +19,14 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.kotlinproject.Model.Medicine
 import com.example.kotlinproject.Repo.AppointmentRepo
 import com.example.kotlinproject.Repo.MedicineRepo
@@ -193,6 +196,29 @@ fun MedicineSearchCard(medicine: Medicine, onEdit: () -> Unit, onDelete: () -> U
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (medicine.imageUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = medicine.imageUrl,
+                    contentDescription = medicine.name,
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFF3F4F6)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Medication, null, tint = Color.Gray)
+                }
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(medicine.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text(medicine.category, fontSize = 12.sp, color = Color.Gray)

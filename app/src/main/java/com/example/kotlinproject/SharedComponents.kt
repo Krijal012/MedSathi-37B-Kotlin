@@ -17,16 +17,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 
 // --- PATIENT DRAWER ---
 @Composable
 fun PatientDrawerContent(
     currentScreen: String,
     patientName: String,
+    profilePhotoUrl: String = "",
     onClose: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -46,7 +49,16 @@ fun PatientDrawerContent(
             modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.AccountCircle, "Profile", tint = Color.White, modifier = Modifier.size(48.dp))
+            if (profilePhotoUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = profilePhotoUrl,
+                    contentDescription = "Profile",
+                    modifier = Modifier.size(48.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(Icons.Default.AccountCircle, "Profile", tint = Color.White, modifier = Modifier.size(48.dp))
+            }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(patientName, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
