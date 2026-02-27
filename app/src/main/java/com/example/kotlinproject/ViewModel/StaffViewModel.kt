@@ -8,8 +8,7 @@ import com.example.kotlinproject.Model.HealthcareProfessional
 import com.example.kotlinproject.Model.MedicalRecord
 import com.google.firebase.firestore.FirebaseFirestore
 
-class StaffViewModel : ViewModel() {
-    private val db = FirebaseFirestore.getInstance()
+class StaffViewModel(private val db: FirebaseFirestore = FirebaseFirestore.getInstance()) : ViewModel() {
     
     private val _appointments = MutableLiveData<List<Appointment>>()
     val appointments: LiveData<List<Appointment>> = _appointments

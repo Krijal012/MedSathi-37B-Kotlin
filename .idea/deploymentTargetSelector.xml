@@ -5,7 +5,7 @@
       <SelectionState runConfigName="AdminDashboardComposeTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="admin_dashboard_title_is_displayed()">
+      <SelectionState runConfigName="PatientDashboardComposeTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>

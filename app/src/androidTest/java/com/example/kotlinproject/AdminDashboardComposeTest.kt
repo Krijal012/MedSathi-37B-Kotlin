@@ -1,12 +1,7 @@
 package com.example.kotlinproject
 
-import android.content.Intent
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
-import androidx.test.core.app.ActivityScenario
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
@@ -16,49 +11,54 @@ import org.junit.runner.RunWith
 class AdminDashboardComposeTest {
 
     @get:Rule
-    val composeRule = createEmptyComposeRule()
-
-    private fun launchActivity() {
-        val intent = Intent(
-            androidx.test.platform.app.InstrumentationRegistry
-                .getInstrumentation().targetContext,
-            AdminDashboard::class.java
-        )
-        ActivityScenario.launch<AdminDashboard>(intent)
-    }
+    val composeRule = createAndroidComposeRule<AdminDashboard>()
 
     @Test
-    fun admin_dashboard_title_is_displayed() {
-        launchActivity()
-        composeRule.onNodeWithText("MedSathi - Admin")
-            .assertIsDisplayed()
-    }
+    fun admin_dashboard_components_load() {
+        // Wait for the Dashboard title to appear (gives time for initial composition and potential data fetch)
+        composeRule.waitUntil(10000) {
+            composeRule.onAllNodesWithText("MedSathi - Admin").fetchSemanticsNodes().isNotEmpty()
+        }
 
-    @Test
-    fun menu_icon_is_clickable() {
-        launchActivity()
-        composeRule.onNodeWithContentDescription("Menu")
-            .performClick()
-    }
+        // 1. Check Top Bar Title
+        composeRule.onNodeWithText("MedSathi - Admin").assertIsDisplayed()
 
-    @Test
-    fun welcome_card_is_displayed() {
-        launchActivity()
-        composeRule.onNodeWithText("Welcome back,")
-            .assertIsDisplayed()
-    }
+        // 2. Check Menu Icon
+        composeRule.onNodeWithContentDescription("Menu").assertIsDisplayed()
 
-    @Test
-    fun stats_cards_are_displayed() {
-        launchActivity()
+        // 3. Check Welcome Card
+        composeRule.onNodeWithText("Welcome back,").assertIsDisplayed()
+
+        // 4. Check Statistics Headers
         composeRule.onNodeWithText("Total Patients").assertIsDisplayed()
         composeRule.onNodeWithText("Total Staffs").assertIsDisplayed()
     }
 
     @Test
-    fun profile_icon_is_displayed() {
-        launchActivity()
-        composeRule.onNodeWithContentDescription("Profile")
+    fun test_drawer_opens() {
+        // Wait for screen to be ready and click Menu
+        composeRule.onNodeWithContentDescription("Menu").performClick()
+        
+        // Wait for drawer animation
+        composeRule.waitForIdle()
+
+        // Check if drawer items appear
+        composeRule.onNodeWithText("Administrator").assertIsDisplayed()
+        
+        // "Dashboard" exists in the drawer and potentially as part of "Admin Dashboard" title, 
+        // so we use onFirst() for robustness.
+        composeRule.onAllNodesWithText("Dashboard").onFirst().assertIsDisplayed()
+        composeRule.onNodeWithText("Manage Patients").assertIsDisplayed()
+        composeRule.onNodeWithText("Manage Staffs").assertIsDisplayed()
+    }
+
+    @Test
+    fun test_profile_icon_click() {
+        // Ambiguity fix: Both the TopAppBar and WelcomeCard have a "Profile" content description icon.
+        // We target the first one (TopAppBar) to ensure the click is valid.
+        composeRule.onAllNodesWithContentDescription("Profile")
+            .onFirst()
             .assertIsDisplayed()
+            .performClick()
     }
 }
